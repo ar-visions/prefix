@@ -85,14 +85,14 @@ os.chdir(build_dir)
 if not os.path.exists('extern'):
     os.mkdir('extern')
 
-if not os.path.exists('extern/install'):
-    os.mkdir('extern/install')
+if not os.path.exists('install'):
+    os.mkdir('install')
 
-if not os.path.exists('extern/install/lib'):
-    os.mkdir('extern/install/lib')
+if not os.path.exists('install/lib'):
+    os.mkdir('install/lib')
 
-if not os.path.exists('extern/install/lib/Frameworks'):
-    os.mkdir('extern/install/lib/Frameworks')
+if not os.path.exists('install/lib/Frameworks'):
+    os.mkdir('install/lib/Frameworks')
 
 common = ['.cc',  '.c',   '.cpp', '.cxx', '.h',  '.hpp',
           '.ixx', '.hxx', '.rs',  '.py',  '.sh', '.txt', '.ini', '.json']

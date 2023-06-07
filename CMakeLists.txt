@@ -1,5 +1,6 @@
+# projects using prefix use this templated CMakeLists.txt (does not change per project unless you can manage to remove a line)
 cmake_minimum_required(VERSION 3.20)
-include(../prefix/main.cmake)
+include(../prefix/ci/bootstrap.cmake)
 get_name("project.json" name)
 project(${name})
 main()

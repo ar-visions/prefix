@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 
-include(../prefix/json.cmake)
-include(../prefix/defs.cmake)
-include(../prefix/module.cmake)
-include(../prefix/package.cmake)
+include(../prefix/ci/json.cmake)
+include(../prefix/ci/defs.cmake)
+include(../prefix/ci/module.cmake)
+include(../prefix/ci/package.cmake)
 ## clang++  (currently massive garbage heap going on in that code-base. g++ is superior)
-## include(../prefix/cxx20.cmake)
+## include(../prefix/ci/cxx20.cmake)
 
 macro(assert COND DESC)
     if(NOT ${COND})
@@ -98,7 +98,7 @@ function(main)
 
     # now that we have prepared python.. we can run prepare.py
     execute_process(
-        COMMAND ${PYTHON} "${CMAKE_SOURCE_DIR}/../ion/ci/prepare.py"
+        COMMAND ${PYTHON} "${CMAKE_SOURCE_DIR}/../prefix/ci/prepare.py"
         RESULT_VARIABLE import_result)
 
     # its written to and valid if this import_result equals 0, no need to delete
