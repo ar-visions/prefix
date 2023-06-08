@@ -182,42 +182,13 @@ function(main)
         math(EXPR i "${i} + 1")
     endwhile()
 
-
-    # proj:module -> build-release/extern/proj/module
+    # load external projects first for dependency ordering
     foreach(import ${imports})
         if(import.${import}.peer)
             load_project(${import.${import}.extern} ${import})
         endif()
     endforeach()
 
-    # load primary
+    # load this project [json index is read inside]
     load_project(${CMAKE_CURRENT_SOURCE_DIR} "")
-
-    # function to print library paths for a given target
-    #function(print_library_paths target_name)
-    #    get_target_property(link_libraries ${target_name} LINK_LIBRARIES)
-    #    message(STATUS "Library paths for target ${target_name}:")
-    #
-    #    foreach(lib ${link_libraries})
-    #        if(TARGET ${lib})
-    #        get_target_property(lib_type ${lib} TYPE)
-    #        if(${lib_type} STREQUAL "INTERFACE_LIBRARY")
-    #            get_target_property(lib_dirs ${lib} INTERFACE_LINK_DIRECTORIES)
-    #        else()
-    #            get_target_property(lib_dirs ${lib} LINK_DIRECTORIES)
-    #        endif()
-    #        if(lib_dirs)
-    #            foreach(dir ${lib_dirs})
-    #            message(STATUS "  -L ${dir}")
-    #            endforeach()
-    #        endif()
-    #        endif()
-    #    endforeach()
-    #    message(STATUS "")
-    #endfunction()
-    #get_property(all_targets DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" PROPERTY BUILDSYSTEM_TARGETS)
-    #foreach(target ${all_targets})
-    #    print_library_paths(${target})
-    #endforeach()
-
 endfunction()

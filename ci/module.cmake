@@ -199,14 +199,12 @@ macro(var_finish)
             source_group("Resources" FILES "${p}/${a}")
             list(APPEND src "${p}/${a}")
             list(APPEND full_src "${p}/${a}")
-            print("_artifacts0: ${p}/${a}")
         else()
             file(GLOB glob ${a})
             foreach(aa ${glob})
                 source_group("Resources" FILES "${p}/${aa}")
                 list(APPEND src "${p}/${aa}")
                 list(APPEND full_src "${p}/${aa}")
-                print("_artifacts1: ${p}/${aa}")
             endforeach()
         endif()
     endforeach()
@@ -237,9 +235,9 @@ macro(var_finish)
             list(APPEND full_includes ${n})
             # /usr/local/include/n exists (system-include)
             # ------------------------
-        #elseif(EXISTS "${CMAKE_INSTALL_PREFIX}/include/${n}")
-        #    message("include (system): ${n}")
-        #    list(APPEND full_includes "${CMAKE_INSTALL_PREFIX}/include/${n}")
+        elseif(EXISTS "${INSTALL_PREFIX}/include/${n}")
+            message("include (prefix): ${n}")
+            list(APPEND full_includes "${INSTALL_PREFIX}/include/${n}")
         else()
             # include must be found; otherwise its indication of error
             # ------------------------
@@ -301,6 +299,7 @@ function(load_project location remote)
     # return right away if this project is not ion-oriented
     set(js ${location}/project.json)
     if(NOT EXISTS ${js})
+        error("load_project could not find index: ${location} ${remote}")
         return()
     endif()
 
@@ -370,7 +369,7 @@ endfunction()
 macro(process_dep d t_name)
     ## find 'dot', this indicates a module is referenced (peer modules should be referenced by project)
     ## ------------------------
-    string(FIND ${d} "." index)
+    string(FIND ${d} ":" index)
 
     ## project.module supported when the project is imported by peer extension or git relationship
     ## ------------------------
@@ -386,15 +385,29 @@ macro(process_dep d t_name)
             set(extern_path ${CMAKE_SOURCE_DIR})
             set(pkg_path    ${CMAKE_SOURCE_DIR}/project.json)
         else()
-            set(extern_path ${CMAKE_BINARY_DIR}/extern/${project}) # projects in externs without versions are peers
-            set(pkg_path    ${CMAKE_BINARY_DIR}/extern/${project}/project.json)
+            set(extern_path ${EXTERN_DIR}/${project}) # projects in externs without versions are peers
+            set(pkg_path    ${EXTERN_DIR}/${project}/project.json)
         endif()
 
-        # if module source
+        # if module-based project (a prefix schema)
         if(EXISTS ${pkg_path})
-            set(target ${project}-${module})
-            target_link_libraries(${t_name} PRIVATE ${target})
-            target_include_directories(${t_name} PUBLIC ${extern_path})
+            set(mod_target ${project}-${module})
+
+            # recursion restricted to project's modules
+            # integrity error if it does not exist otherwise (should exist with external import ordering)
+            if(project STREQUAL "${project_name}")
+                if(NOT TARGET ${mod_target})
+                    print("generation reordering: ${module}")
+                    load_module(${r_path} ${project_name} ${module} ${pkg_path})
+                endif()
+            endif()
+
+            get_target_property(mod_libs ${mod_target} INTERFACE_LINK_LIBRARIES)
+
+            if(mod_libs)
+                target_link_libraries(${t_name} PRIVATE ${mod_libs})
+                target_include_directories(${t_name} PUBLIC ${extern_path})
+            endif()
         else()
             set(found FALSE)
             foreach (import ${imports})
@@ -596,8 +609,9 @@ macro(create_module_targets)
     endif()
 
     target_sources(${t_name} PRIVATE ${module_file})
+    target_link_directories(${t_name} PUBLIC ${INSTALL_PREFIX}/lib)
 
-    # support library paths
+    # extra library paths
     foreach(p ${lib_paths})
         target_link_directories(${t_name} PUBLIC ${p})
     endforeach()

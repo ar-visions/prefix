@@ -21,8 +21,8 @@ io_res    = f'{build_dir}/io/res'
 cm_build  = 'ion-build'
 
 pf_repo        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-install_prefix = pf_repo + '/install';
-extern_dir     = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/extern';
+install_prefix = f'{pf_repo}/install';
+extern_dir     = f'{pf_repo}/extern';
 
 gen_only  = os.environ.get('GEN_ONLY')
 
@@ -169,6 +169,15 @@ def prepare_build(this_src_dir, fields, mt_project):
     vname, name, version, res, sha256, url, commit, libs, includes, bins = parse(fields)
 
     dst = f'{extern_dir}/{vname}'
+
+    ## overlay files -- this is an effective workflow for getting to a .diff
+    ## use overlays while its still being hammered out and once you want 
+    ## to forget it just use the generated diff in build folder
+    overlay = f'{this_src_dir}/overlays/{name}'
+    if os.path.exists(overlay):
+        cp_deltree(overlay, dst, dirs_exist_ok=True)
+        diff_file = f'{build_dir}/{name}.diff'
+        
     dst_build, timestamp, cached = is_cached(dst, vname, mt_project)
 
     if libs:     fields['libs']     = [re.sub(r'%([^%]+)%', replace_env_variables, s) for s in fields['libs']]
@@ -225,6 +234,8 @@ def prepare_build(this_src_dir, fields, mt_project):
 # the basic ci module is implicit here and purely going to just watch the .cmake for changes
 # a direct user of this would be ion:core
 everything = ["prefix"]
+prefix_sym = f'{extern_dir}/prefix'
+if not os.path.exists(prefix_sym): os.symlink(pf_repo, prefix_sym, True)
 
 # create sym-link for each remote as f'{name}' as its first include entry, or the repo path if no includes
 # all peers are symlinked and imported first
