@@ -243,7 +243,7 @@ macro(var_finish)
         else()
             # include must be found; otherwise its indication of error
             # ------------------------
-            message(FATAL "couldnt find include path for symbol: ${n}")
+            message(FATAL_ERROR "couldnt find include path for symbol: ${n}")
         endif()
     endforeach()
 endmacro()
