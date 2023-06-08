@@ -14,6 +14,10 @@ macro(cpp ver)
     set(cpp ${ver})
 endmacro()
 
+macro(cstd ver)
+    set(cstd ${ver})
+endmacro()
+
 #set_property(GLOBAL PROPERTY GLOBAL_DEPENDS_DEBUG_MODE 1)
  
 # generate some C source for version
@@ -79,11 +83,12 @@ macro(var_prepare r_path)
     set(_apps_src       "")
     set(_tests_src      "")
     set(cpp             20)
+    set(cstd            99)
     set(p "${module_path}")
 
-    # compile these as c++-module (.ixx extension) only on not WIN32
+    # compile these as c++-module (.ixx extension) (unix/mac only for g++)
     if(NOT WIN32)
-        file(GLOB _src_0 "${p}/*.ixx")
+        #file(GLOB _src_0 "${p}/*.ixx")
         #foreach(isrc ${_src_0})
         #    set_source_files_properties(${isrc} PROPERTIES LANGUAGE CXX COMPILE_FLAGS "-x c++-module")
         #endforeach()
@@ -296,6 +301,7 @@ function(error text)
 endfunction()
 
 function(load_project location remote)
+    print("project: ${location}")
     # return right away if this project is not ion-oriented
     set(js ${location}/project.json)
     if(NOT EXISTS ${js})
@@ -400,12 +406,12 @@ macro(process_dep d t_name)
                     print("generation reordering: ${module}")
                     load_module(${r_path} ${project_name} ${module} ${pkg_path})
                 endif()
+                # should be valid target now..
             endif()
-
-            get_target_property(mod_libs ${mod_target} INTERFACE_LINK_LIBRARIES)
-
-            if(mod_libs)
-                target_link_libraries(${t_name} PRIVATE ${mod_libs})
+            
+            get_target_property(t_type ${mod_target} TYPE)
+            if(t_type MATCHES ".*_LIBRARY$")
+                target_link_libraries(${t_name} PRIVATE ${mod_target})
                 target_include_directories(${t_name} PUBLIC ${extern_path})
             endif()
         else()
@@ -484,11 +490,38 @@ macro(address_sanitizer t_name)
     endif()
 endmacro()
 
+# has extensions, useful thing.
+function(contains_ext found exts src)
+    separate_arguments(exts_list NATIVE_COMMAND ${exts})
+    set(m "")
+    set(${found} FALSE PARENT_SCOPE)
+    foreach(e ${exts_list})
+        if(m)
+            set(m ${m}|\\${e}$)
+        else()
+            set(m \\${e}$)
+        endif()
+    endforeach()
+    foreach(f ${src})
+        if(f MATCHES ${m})
+            #print("${f} matches ${m}")
+            set(${found} TRUE PARENT_SCOPE)
+            break()
+        endif()
+    endforeach()
+endfunction()
+
 macro(create_module_targets)
     set(v_src ${CMAKE_BINARY_DIR}/${t_name}-version.cpp)
     source_group("Resources" FILES ${js})
     set_version_source(${t_name} ${version})
-    if(full_src)
+
+    # compilable module checks
+    contains_ext(is_compilable ${COMPILABLE_EXTS} ${full_src})
+    if (NOT is_compilable)
+        add_custom_target(${t_name})
+        print("non-compilable module: ${t_name}")
+    else()
         if (dynamic)
             add_library(${t_name} ${h_list} ${js})
             if(cpp EQUAL 23)
@@ -538,135 +571,107 @@ macro(create_module_targets)
         else()
             message(FATAL_ERROR "cpp version ${cpp} not supported")
         endif()
-    else()
-        list(APPEND full_src ${v_src})
-        add_library(${t_name} STATIC ${full_src} ${h_list} ${js})
-    endif()
-    if(full_includes)
-        target_include_directories(${t_name} PUBLIC ${full_includes})
-    endif()
-    set_target_properties(${t_name} PROPERTIES LINKER_LANGUAGE CXX)
 
-    # Set the property to mark them as resources
-    set_source_files_properties(${module_file} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-    source_group("Resources" FILES ${module_file})
-
-    # Optional: organize the files in a folder structure in Xcode
-    #source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${RES_FILES})
-
-    
-    # app products
-    # ------------------------
-    set_compilation(${t_name} ${mod})
-
-    # accumulate resources in binary based on targets post-built
-    # ------------------------
-    if(EXISTS ${p}/res)
-        add_custom_command(
-            TARGET ${t_name} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${p}/res ${CMAKE_BINARY_DIR})
-    endif()
-
-    # test products
-    # ------------------------
-    foreach(test ${tests})
-        # strip the file stem for its target name
-        # ------------------------
-        get_filename_component(e ${test} EXT)
-        string(REGEX REPLACE "\\.[^.]*$" "" test_name ${test})
-        set(test_file "${p}/tests/${test}")
-        set(test_target ${test_name})
-        list(APPEND test_list ${test})
-        add_executable(${test_target} ${test_file})
-    
-        # add apps as additional include path, standard includes and compilation settings for module
-        # ------------------------
-        target_include_directories(${test_target} PRIVATE ${p}/apps)
-        module_includes(${test_target} ${r_path} ${mod})
-        set_compilation(${test_target} ${mod})
-        target_link_libraries(${test_target} PRIVATE ${t_name})
-        # ------------------------
-        if(NOT TARGET test-${t_name})
-            add_custom_target(test-${t_name})
-            if (NOT TARGET test-all)
-                add_custom_target(test-all)
-            endif()
-            add_dependencies(test-all test-${t_name})
+        if(full_includes)
+            target_include_directories(${t_name} PUBLIC ${full_includes})
         endif()
-    
-       # add this test to the test-proj-mod target group
-       # ------------------------
-       add_dependencies(test-${t_name} ${test_target})
-    
-    endforeach()
+        set_target_properties(${t_name} PROPERTIES LINKER_LANGUAGE CXX)
 
-    module_includes(${t_name} ${r_path} ${mod})
-    #set_property(TARGET ${t_name} PROPERTY POSITION_INDEPENDENT_CODE ON) # not sure if we need it on with static here
-    
-    if(external_repo)
-        set_target_properties(${t_name} PROPERTIES EXCLUDE_FROM_ALL TRUE)
-    endif()
+        # show module file in IDEs
+        set_source_files_properties(${module_file} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+        source_group("Resources" FILES ${module_file})
+        set_compilation(${t_name} ${mod})
 
-    target_sources(${t_name} PRIVATE ${module_file})
-    target_link_directories(${t_name} PUBLIC ${INSTALL_PREFIX}/lib)
+        # accumulate resources in binary based on targets post-built
+        # ------------------------
+        if(EXISTS ${p}/res)
+            add_custom_command(
+                TARGET ${t_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${p}/res ${CMAKE_BINARY_DIR})
+        endif()
 
-    # extra library paths
-    foreach(p ${lib_paths})
-        target_link_directories(${t_name} PUBLIC ${p})
-    endforeach()
+        # test products
+        # ------------------------
+        foreach(test ${tests})
+            # strip the file stem for its target name
+            # ------------------------
+            get_filename_component(e ${test} EXT)
+            string(REGEX REPLACE "\\.[^.]*$" "" test_name ${test})
+            set(test_file "${p}/tests/${test}")
+            set(test_target ${test_name})
+            list(APPEND test_list ${test})
+            add_executable(${test_target} ${test_file})
+        
+            # add apps as additional include path, standard includes and compilation settings for module
+            # ------------------------
+            target_include_directories(${test_target} PRIVATE ${p}/apps)
+            module_includes(${test_target} ${r_path} ${mod})
+            set_compilation(${test_target} ${mod})
+            target_link_libraries(${test_target} PRIVATE ${t_name})
+            # ------------------------
+            if(NOT TARGET test-${t_name})
+                add_custom_target(test-${t_name})
+                if (NOT TARGET test-all)
+                    add_custom_target(test-all)
+                endif()
+                add_dependencies(test-all test-${t_name})
+            endif()
+        
+        # add this test to the test-proj-mod target group
+        # ------------------------
+        add_dependencies(test-${t_name} ${test_target})
+        
+        endforeach()
 
-    if(dep)
-        foreach(d ${dep})
-            process_dep(${d} ${t_name})
+        module_includes(${t_name} ${r_path} ${mod})
+        #set_property(TARGET ${t_name} PROPERTY POSITION_INDEPENDENT_CODE ON) # not sure if we need it on with static here
+        
+        if(external_repo)
+            set_target_properties(${t_name} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+        endif()
+
+        target_sources(${t_name} PRIVATE ${module_file})
+        target_link_directories(${t_name} PUBLIC ${INSTALL_PREFIX}/lib)
+
+        # extra library paths
+        foreach(p ${lib_paths})
+            target_link_directories(${t_name} PUBLIC ${p})
+        endforeach()
+
+        if(dep)
+            foreach(d ${dep})
+                process_dep(${d} ${t_name})
+            endforeach()
+        endif()
+
+        foreach(app ${apps})
+            set(app_path "${p}/apps/${app}")
+            string(REGEX REPLACE "\\.[^.]*$" "" t_app ${app})
+            list(APPEND app_list ${t_app})
+            
+            # add app target
+            if(cuda_add_executable)
+                cuda_add_executable(${t_app} ${app_path} ${${t_app}_src})
+            else()
+                add_executable(${t_app} ${app_path} ${${t_app}_src}) # must be a setting per app, so store in map or something win32(+app)
+            endif()
+            
+            address_sanitizer(${t_app})
+            target_precompile_headers(${t_app} PRIVATE ${p}/${mod}.hpp)
+            target_include_directories(${t_app} PRIVATE ${p}/apps)
+            module_includes(${t_app} ${r_path} ${mod})
+            set_compilation(${t_app} ${mod})
+            string(TOUPPER ${t_app} u)
+            string(REPLACE "-" "_" u ${u})
+
+            target_compile_definitions(${t_app} PRIVATE APP_${u})
+            target_link_libraries(${t_app} PRIVATE ${t_name}) # public?
+            add_dependencies(${t_app} ${t_name})
+            
         endforeach()
     endif()
 
-    foreach(app ${apps})
-        set(app_path "${p}/apps/${app}")
-        string(REGEX REPLACE "\\.[^.]*$" "" t_app ${app})
-        list(APPEND app_list ${t_app})
-        
-        # add app target
-        if(cuda_add_executable)
-            cuda_add_executable(${t_app} ${app_path} ${${t_app}_src})
-        else()
-            add_executable(${t_app} ${app_path} ${${t_app}_src}) # must be a setting per app, so store in map or something win32(+app)
-        endif()
-        
-        address_sanitizer(${t_app})
-
-        # add pre-compiled header, the module include 
-        # (mod.cpp is required, but not explicitly added as source. 
-        #  this command takes care of that extra binding)
-        # ------------------------
-        target_precompile_headers(${t_app} PRIVATE ${p}/${mod}.hpp)
-        
-        # add include dir of apps
-        # ------------------------
-        target_include_directories(${t_app} PRIVATE ${p}/apps)
-
-        # setup module includes
-        # ------------------------
-        module_includes(${t_app} ${r_path} ${mod})
-
-        # common compilation flags (this sets the defs too)
-        # ------------------------
-        set_compilation(${t_app} ${mod})
-
-        # format upper-case name for app name
-        # ------------------------
-        string(TOUPPER ${t_app} u)
-        string(REPLACE "-" "_" u ${u})
-
-        # define global name-here -> APP_NAME_HERE
-        # ------------------------
-        target_compile_definitions(${t_app} PRIVATE APP_${u})
-
-        target_link_libraries(${t_app} PRIVATE ${t_name}) # public?
-        add_dependencies(${t_app} ${t_name})
-        
-    endforeach()
 endmacro()
 
 # load module file for a given project (mod, placed in module-folders)

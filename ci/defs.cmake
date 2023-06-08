@@ -7,9 +7,10 @@ option(GEN_ONLY "dont run the build action after generating the build folder for
 get_filename_component(ci_dir     "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY)
 get_filename_component(parent_dir "${ci_dir}"                  DIRECTORY)
 #
-set(INSTALL_PREFIX "${parent_dir}/install")
-set(CI_DIR         "${parent_dir}/ci")
-set(EXTERN_DIR     "${parent_dir}/extern")
+set(INSTALL_PREFIX  "${parent_dir}/install")
+set(CI_DIR          "${parent_dir}/ci")
+set(EXTERN_DIR      "${parent_dir}/extern")
+set(COMPILABLE_EXTS ".cpp .c .cxx .ixx")
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
