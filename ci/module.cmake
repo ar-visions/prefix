@@ -5,6 +5,7 @@ if (DEFINED ModuleGuard)
 endif()
 set(ModuleGuard yes)
 
+# apple has been quiet about this too but thats an aside
 if(NOT APPLE)
     find_package(CUDAToolkit QUIET)
 endif()
@@ -37,7 +38,7 @@ macro(module_includes t r_path mod)
     target_include_directories(${t} PRIVATE ${r_path})
     target_include_directories(${t} PRIVATE ${CMAKE_BINARY_DIR})
     # will likely still need a system include
-    target_include_directories(${t} PRIVATE "${BINARY_INSTALL_PREFIX}/include")
+    target_include_directories(${t} PRIVATE "${INSTALL_PREFIX}/include")
 endmacro()
 
 macro(set_compilation t mod)
@@ -215,13 +216,14 @@ macro(var_finish)
     # add prefixed location if it exists
     # ------------------------
     if(EXISTS "${CMAKE_INSTALL_PREFIX}/include")
-        print("sys includes: ${CMAKE_INSTALL_PREFIX}/include")
+        # prefix takes precedence over system
+        #print("sys includes: ${CMAKE_INSTALL_PREFIX}/include")
         list(APPEND full_includes "${CMAKE_INSTALL_PREFIX}/include")
     endif()
 
-    if(EXISTS "${BINARY_INSTALL_PREFIX}/include")
-        print("install includes: ${BINARY_INSTALL_PREFIX}/include")
-        list(APPEND full_includes "${BINARY_INSTALL_PREFIX}/include")
+    if(EXISTS "${INSTALL_PREFIX}/include")
+        #print("install includes: ${INSTALL_PREFIX}/include")
+        list(APPEND full_includes "${INSTALL_PREFIX}/include")
     endif()
 
     # handle includes by preferring abs path, then relative to prefix-path
@@ -528,7 +530,6 @@ macro(create_module_targets)
         add_library(${t_name} STATIC ${full_src} ${h_list} ${js})
     endif()
     if(full_includes)
-        message(STATUS "full includes for ${t_name} = ${full_includes}")
         target_include_directories(${t_name} PUBLIC ${full_includes})
     endif()
     set_target_properties(${t_name} PROPERTIES LINKER_LANGUAGE CXX)

@@ -3,7 +3,13 @@ enable_language(CXX)
 
 option(GEN_ONLY "dont run the build action after generating the build folder for each external dependency" FALSE)
 
-set(BINARY_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/extern/install")
+# get path of install / extern
+get_filename_component(ci_dir     "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY)
+get_filename_component(parent_dir "${ci_dir}"                  DIRECTORY)
+#
+set(INSTALL_PREFIX "${parent_dir}/install")
+set(CI_DIR         "${parent_dir}/ci")
+set(EXTERN_DIR     "${parent_dir}/extern")
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
@@ -114,7 +120,7 @@ macro(set_defs)
         set(m_dyn                       ".dylib")
         set(app_ext                     "")
         set(lib_ext_extra               ".lib")
-        file(GLOB BINS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "build/*")
+        file(GLOB BINS RELATIVE         "${CMAKE_CURRENT_SOURCE_DIR}" "build/*")
         set_source_files_properties(${BINS} PROPERTIES XCODE_EXPLICIT_FILE_TYPE "compiled")
     elseif(WIN32)
         set(m_pre                       "")

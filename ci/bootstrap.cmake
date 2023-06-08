@@ -53,13 +53,13 @@ macro(bootstrap_python)
 
             ## clone wolfssl for python (its changed around to use it)
             if(NOT EXISTS extern/wolfssl)
-                execute_process(COMMAND git clone "https://github.com/wolfSSL/wolfssl.git" extern/wolfssl)
+                execute_process(COMMAND git clone "https://github.com/wolfSSL/wolfssl.git" ${EXTERN_DIR}/wolfssl)
                 execute_process(COMMAND configure WORKING_DIRECTORY extern/wolfssl)
             endif()
 
             ## io resources
             if(NOT EXISTS extern/io)
-                execute_process(COMMAND git clone "https://github.com/ar-visions/ar-visions.github.io" extern/io)
+                execute_process(COMMAND git clone "https://github.com/ar-visions/ar-visions.github.io" ${EXTERN_DIR}/io)
             endif()
 
             ## extract python source
@@ -98,8 +98,7 @@ function(main)
 
     # now that we have prepared python.. we can run prepare.py
     execute_process(
-        COMMAND ${PYTHON} "${CMAKE_SOURCE_DIR}/../prefix/ci/prepare.py"
-        RESULT_VARIABLE import_result)
+        COMMAND ${PYTHON} "${CI_DIR}/prepare.py" RESULT_VARIABLE import_result)
 
     # its written to and valid if this import_result equals 0, no need to delete
     if (NOT (import_result EQUAL "0"))
@@ -119,7 +118,7 @@ function(main)
         if (s_entry)
             list(APPEND imports ${s_entry})
             set(import.${s_entry}          ${s_entry} CACHE INTERNAL "")
-            set(import.${s_entry}.extern   ${CMAKE_BINARY_DIR}/extern/${s_entry} CACHE INTERNAL "")
+            set(import.${s_entry}.extern   ${EXTERN_DIR}/${s_entry} CACHE INTERNAL "")
             set(import.${s_entry}.peer     true  CACHE INTERNAL "")
             set(import.${s_entry}.version  "dev" CACHE INTERNAL "")
             
@@ -133,7 +132,7 @@ function(main)
             set(import.${n_entry}.includes "" CACHE INTERNAL "")
             set(import.${n_entry}.libs     "" CACHE INTERNAL "")
             set(import.${n_entry}.bins     "" CACHE INTERNAL "")
-            set(import.${n_entry}.extern   ${CMAKE_BINARY_DIR}/extern/${n_entry}-${import_index_${i}.version} CACHE INTERNAL "")
+            set(import.${n_entry}.extern   ${EXTERN_DIR}/${n_entry}-${import_index_${i}.version} CACHE INTERNAL "")
 
             # add include paths
             set(ii 0)
@@ -174,7 +173,6 @@ function(main)
                 if(NOT bin)
                     break()
                 endif()
-                print("bin = ${bin}")
                 list(APPEND import.${n_entry}.bins ${bin})
                 math(EXPR ii "${ii} + 1")
             endwhile()

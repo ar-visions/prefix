@@ -8,5 +8,3 @@ set(PackageGuard yes)
 function(find_import name fields)
     sbeParseJson(package package_contents)
 endfunction()
-
-
