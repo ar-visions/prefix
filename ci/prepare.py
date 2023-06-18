@@ -54,12 +54,16 @@ def check(a):
     return a
 
 def      parse(f): return f['name'] + '-' + f['version'], f['name'], f['version'], f.get('res'), f.get('sha256'), f.get('url'), f.get('commit'), f.get('libs'), f.get('includes'), f.get('bins')
-def    git(*args): return subprocess.run(['git']   + list(args), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+def    git(*args):
+    cmd = ['git'] + list(args)
+    shell_cmd = ' '.join(cmd)
+    print('> ', shell_cmd)
+    return subprocess.run(['git']   + list(args), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
 def  cmake(*args):
     cmd = ['cmake'] + list(args)
     shell_cmd = ' '.join(cmd)
-    print('cmake > ', shell_cmd)
+    print('> ', shell_cmd)
     return subprocess.run(cmd, capture_output=True, text=True)
 
 def       build(): return cmake('--build',   cm_build)
@@ -163,7 +167,7 @@ def cp_deltree(src, dst, dirs_exist_ok=True):
                 os.remove(rm_cmd)
                 if os.path.exists(src_rm): # subsequent calls error.  the repo would need deleted files restored but no other changes reverted.  better to just check
                     os.remove(src_rm)
-    
+
 ## prepare an { object } of external repo
 def prepare_build(this_src_dir, fields, mt_project):
     vname, name, version, res, sha256, url, commit, libs, includes, bins = parse(fields)
@@ -173,11 +177,15 @@ def prepare_build(this_src_dir, fields, mt_project):
     ## overlay files -- this is an effective workflow for getting to a .diff
     ## use overlays while its still being hammered out and once you want 
     ## to forget it just use the generated diff in build folder
-    overlay = f'{this_src_dir}/overlays/{name}'
-    if os.path.exists(overlay):
-        cp_deltree(overlay, dst, dirs_exist_ok=True)
-        diff_file = f'{build_dir}/{name}.diff'
-        
+
+
+    # 
+    #overlay = f'{this_src_dir}/overlays/{name}'
+    #if os.path.exists(overlay):
+    #    cp_deltree(overlay, dst, dirs_exist_ok=True)
+    #    diff_file = f'{build_dir}/{name}.diff'
+    #
+      
     dst_build, timestamp, cached = is_cached(dst, vname, mt_project)
 
     if libs:     fields['libs']     = [re.sub(r'%([^%]+)%', replace_env_variables, s) for s in fields['libs']]
@@ -201,7 +209,8 @@ def prepare_build(this_src_dir, fields, mt_project):
             with zipfile.ZipFile(res_zip, 'r') as z: z.extractall(dst)
         elif url:
             os.chdir(extern_dir)
-            if not os.path.exists(vname): git('clone', '--recursive', url, vname)
+            if not os.path.exists(vname):
+                git('clone', '--recursive', url, vname)
             os.chdir(vname)
             git('fetch')
             diff_find = f'{this_src_dir}/diff/{name}.diff' # it might be of value to store diffs in prefix.
@@ -219,11 +228,22 @@ def prepare_build(this_src_dir, fields, mt_project):
         overlay = f'{this_src_dir}/overlays/{name}'
         if os.path.exists(overlay):
             print('copying overlay for project: ', name)
+            
             #shutil.copytree(overlay, dst, dirs_exist_ok=True)
             cp_deltree(overlay, dst, dirs_exist_ok=True)
+
+            # include some extra code without needing to copy the CMakeLists.txt
+            if os.path.exists(f'{overlay}/mod'):
+                file = f'{dst}/CMakeLists.txt'
+                print('file = ', file)
+                assert(os.path.exists(file)) # if there is a mod overlay, it must be a CMake project because this merely includes after
+                with open(file, 'a') as contents:
+                    contents.write('\r\ninclude(mod)\r\n')
+            
             diff_file = f'{build_dir}/{name}.diff'
             with open(diff_file, 'w') as d:
                 subprocess.run(['git', 'diff'], stdout=d)
+
             print('diff-gen: ', diff_file)
     else:
         cached = True
@@ -232,7 +252,7 @@ def prepare_build(this_src_dir, fields, mt_project):
 
 # prefix with prefix.
 # the basic ci module is implicit here and purely going to just watch the .cmake for changes
-# a direct user of this would be ion:core
+# a direct user of this would be ion:mx
 everything = ["prefix"]
 prefix_sym = f'{extern_dir}/prefix'
 if not os.path.exists(prefix_sym): os.symlink(pf_repo, prefix_sym, True)
@@ -242,6 +262,7 @@ if not os.path.exists(prefix_sym): os.symlink(pf_repo, prefix_sym, True)
 def prepare_project(src_dir):
     project_file = src_dir + '/project.json'
     with open(project_file, 'r') as project_contents:
+        print('loading: ', project_file)
         project_json = json.load(project_contents)
         import_list  = project_json['import']
         mt_project   = os.path.getmtime(project_file)
@@ -268,7 +289,7 @@ def prepare_project(src_dir):
             name        = fields['name']
             cmake       = fields.get('cmake')
             environment = fields.get('environment')
-            hide        = h == True or h == sys_type() # designed for vulkan things mixing up with wrappers so that you dont expose definitions, includes, etc.  the wrapper does that and knows where this stuff is.
+            hide        = h == True or h == sys_type()
             cmake_script_root = '.'
             cmake_args  = []
 
@@ -307,7 +328,7 @@ def prepare_project(src_dir):
             
             ## check the timestamp here
             remote_path, remote_build_path, timestamp, cached, vname, is_git, libs, res, url = prepare_build(src_dir, fields, mt_project)
-
+            
             ## only building the src git repos; the resources are system specific builds
             if not cached and is_git:
                 gen_res = gen(cfg, cmake_script_root, prefix_path, cmake_args)
