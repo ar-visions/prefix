@@ -20,6 +20,13 @@ js_path   = os.environ.get('JSON_IMPORT_INDEX')
 io_res    = f'{build_dir}/io/res'
 cm_build  = 'ion-build'
 
+if 'CMAKE_SOURCE_DIR' in os.environ: del os.environ['CMAKE_SOURCE_DIR']
+if 'CMAKE_BINARY_DIR' in os.environ: del os.environ['CMAKE_BINARY_DIR']
+if 'CMAKE_BUILD_TYPE' in os.environ: del os.environ['CMAKE_BUILD_TYPE']
+#if 'SDKROOT'          in os.environ: del os.environ['SDKROOT']
+if 'CPATH'            in os.environ: del os.environ['CPATH']
+if 'LIBRARY_PATH'     in os.environ: del os.environ['LIBRARY_PATH']
+
 pf_repo        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 install_prefix = f'{pf_repo}/install';
 extern_dir     = f'{pf_repo}/extern';
@@ -66,7 +73,13 @@ def  cmake(*args):
     print('> ', shell_cmd)
     return subprocess.run(cmd, capture_output=True, text=True)
 
-def       build(): return cmake('--build',   cm_build)
+def  make(*args):
+    cmd = ['make'] + list(args)
+    shell_cmd = ' '.join(cmd)
+    print('> ', shell_cmd)
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+def       build(): return  make()
 def  cm_install(): return cmake('--install', cm_build)
 def         gen(type, cmake_script_root, prefix_path, extra=None):
     build_type = type[0].upper() + type[1:].lower()
@@ -339,6 +352,13 @@ def prepare_project(src_dir):
                     if gen_res.stderr: print(gen_res.stderr)
                     exit(1)
                 
+                prev_cwd = os.getcwd()
+                print('-->', remote_build_path)
+                with open('/Users/kalen/src/prefix/extern/glm-0.9.9.8/ion-build/env.txt', 'w') as f:
+                    for key, value in os.environ.items():
+                        print(f"{key}: {value}", file=f)
+                os.chdir(remote_build_path)
+
                 build_res = build()
                 if build_res.returncode != 0:
                     print(build_res.stdout)
@@ -346,6 +366,7 @@ def prepare_project(src_dir):
                     print( '------------------------------------------------')
                     if build_res.stderr: print(build_res.stderr)
                     exit(1)
+                os.chdir(prev_cwd)
                 
                 # something with libs is just a declaration with an environment variable usually, already installed in effect if there are libs
                 if not libs:
