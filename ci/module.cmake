@@ -170,6 +170,17 @@ macro(var_prepare r_path)
 
 endmacro()
 
+# resolve a list of symlinks so vscode is not confused anymore
+function(resolve_symlinks input_list output_list)
+    set(resolved_list "")
+    foreach(src ${${input_list}})
+        get_filename_component(resolved_path ${src} REALPATH)
+        #print("resolve: ${src} -> ${resolved_path}")
+        list(APPEND resolved_list ${resolved_path})
+    endforeach()
+    set(${output_list} ${resolved_list} PARENT_SCOPE)
+endfunction()
+
 macro(var_finish)
 
     # ------------------------
@@ -213,7 +224,9 @@ macro(var_finish)
             endforeach()
         endif()
     endforeach()
-        
+
+    # resolve this full_src list
+    resolve_symlinks(full_src full_src)
     set(full_includes "")
 
     # add prefixed location if it exists
@@ -391,8 +404,11 @@ macro(process_dep d t_name)
             set(extern_path ${CMAKE_SOURCE_DIR})
             set(pkg_path    ${CMAKE_SOURCE_DIR}/project.json)
         else()
+            # in cmake, we must resolve all symlinks otherwise 'users' of the compilation output and/or debug file locations get it a bit wrong
             set(extern_path ${EXTERN_DIR}/${project}) # projects in externs without versions are peers
             set(pkg_path    ${EXTERN_DIR}/${project}/project.json)
+            get_filename_component(extern_path ${extern_path} REALPATH)
+            get_filename_component(pkg_path    ${pkg_path}    REALPATH)
         endif()
 
         # if module-based project (a prefix schema)
@@ -413,6 +429,7 @@ macro(process_dep d t_name)
             if(t_type MATCHES ".*_LIBRARY$")
                 target_link_libraries(${t_name} PRIVATE ${mod_target})
                 target_include_directories(${t_name} PUBLIC ${extern_path})
+                print("target_include_directories ${t_name} -> ${extern_path}")
             endif()
         else()
             set(found FALSE)
@@ -686,5 +703,3 @@ function(load_module r_path project_name mod js)
         create_module_targets()
     endif()
 endfunction()
-
-

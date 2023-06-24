@@ -142,7 +142,13 @@ function(main)
                 if(NOT include)
                     break()
                 endif()
-                list(APPEND import.${n_entry}.includes ${import.${n_entry}.extern}/${include})
+                
+                set(loc ${import.${n_entry}.extern}/${include})
+                get_filename_component(resolve ${loc} REALPATH)
+                print("${loc} -> ${resolve}")
+                
+                list(APPEND import.${n_entry}.includes ${resolve})
+                
                 math(EXPR ii "${ii} + 1")
             endwhile()
 
@@ -185,7 +191,10 @@ function(main)
     # load external projects first for dependency ordering
     foreach(import ${imports})
         if(import.${import}.peer)
-            load_project(${import.${import}.extern} ${import})
+            set(project_loc ${import.${import}.extern})
+            get_filename_component(resolve ${project_loc} REALPATH)
+            print("project resolve: ${project_loc} -> ${resolve}")
+            load_project(${resolve} ${import})
         endif()
     endforeach()
 
