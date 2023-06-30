@@ -142,13 +142,15 @@ function(main)
                 if(NOT include)
                     break()
                 endif()
-                
-                set(loc ${import.${n_entry}.extern}/${include})
-                get_filename_component(resolve ${loc} REALPATH)
-                print("${loc} -> ${resolve}")
-                
-                list(APPEND import.${n_entry}.includes ${resolve})
-                
+                if (EXISTS ${include})
+                    print("including sdk: ${include}")
+                    list(APPEND import.${n_entry}.includes ${include})
+                else()
+                    set(loc ${import.${n_entry}.extern}/${include})
+                    get_filename_component(resolve ${loc} REALPATH)
+                    print("${loc} -> ${resolve}")
+                    list(APPEND import.${n_entry}.includes ${resolve})
+                endif()
                 math(EXPR ii "${ii} + 1")
             endwhile()
 
@@ -159,17 +161,26 @@ function(main)
                 if(NOT lib)
                     break()
                 endif()
-
-                # msvc has one additional dir which is switched on standard CMAKE_BUILD_TYPE
-                # env var passed to prepare.py, passed onto external cmake projects
-                set(extra "")
-                if(MSVC)
-                    set(extra "/Release")
-                    if(DEBUG)
-                        set(extra "/Debug")
+                # if there is an absolute location specified to libs
+                if (EXISTS ${lib})
+                    print("sdk libs: ${lib}")
+                    list(APPEND import.${n_entry}.libs ${lib})
+                else()
+                    print("adding relative lib: ${lib}")
+                    # msvc has one additional dir which is switched on standard CMAKE_BUILD_TYPE
+                    # env var passed to prepare.py, passed onto external cmake projects
+                    set(extra "")
+                    if(MSVC)
+                        set(extra "/Release")
+                        if(DEBUG)
+                            set(extra "/Debug")
+                        endif()
                     endif()
+                    #print("first = ${import.${n_entry}.extern}/")
+                    #print("second = ${lib}${extra}")
+                    list(APPEND import.${n_entry}.libs ${import.${n_entry}.extern}/${lib}${extra}) # probably better to translate in the prepare.py (bin is doing this)
                 endif()
-                list(APPEND import.${n_entry}.libs ${import.${n_entry}.extern}/${lib}${extra}) # probably better to translate in the prepare.py (bin is doing this)
+
                 math(EXPR ii "${ii} + 1")
             endwhile()
 

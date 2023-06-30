@@ -561,6 +561,8 @@ macro(create_module_targets)
                 #        BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/${mod}"
                 #        FILES ${h_list})
             else()
+                print("full src for target ${t_name}: ${full_src}")
+                
                 target_sources(${t_name} PRIVATE ${full_src} ${h_list} ${js})
             endif()
         else()
