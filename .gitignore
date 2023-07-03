@@ -1,3 +1,4 @@
 /install*
 /extern
 /build*
+.DS_Store
