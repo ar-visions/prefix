@@ -9,6 +9,7 @@ import platform
 import hashlib
 #import requests
 import shutil
+import glob
 import zipfile
 from datetime import datetime
 from datetime import timedelta
@@ -305,7 +306,8 @@ def prepare_project(src_dir):
             hide        = h == True or h == sys_type()
             cmake_script_root = '.'
             cmake_args  = []
-
+            cmake_install_libs = None
+            
             if cmake:
                 cmpath = cmake.get('path')
                 if cmpath:
@@ -313,6 +315,7 @@ def prepare_project(src_dir):
                 cmargs = cmake.get('args')
                 if cmargs:
                     cmake_args = cmargs
+                cmake_install_libs = cmake.get('install_libs')
             
             # set environment variables to those with %VAR%
             if environment:
@@ -353,10 +356,6 @@ def prepare_project(src_dir):
                     exit(1)
                 
                 prev_cwd = os.getcwd()
-                print('-->', remote_build_path)
-                with open('/Users/kalen/src/prefix/extern/glm-0.9.9.8/ion-build/env.txt', 'w') as f:
-                    for key, value in os.environ.items():
-                        print(f"{key}: {value}", file=f)
                 os.chdir(remote_build_path)
 
                 build_res = build()
@@ -377,6 +376,14 @@ def prepare_project(src_dir):
                         print( '------------------------------------------------')
                         if install_res.stderr: print(install_res.stderr)
                         exit(1)
+                    
+                    if cmake_install_libs:
+                        print(f'installing extra libs, because Python makes sense and CMake installs do not')
+                        for pattern in cmake_install_libs:
+                            file_list = glob.glob(f'{remote_path}/{pattern}')
+                            for file_path in file_list:
+                                print(f'installing: {file_path}')
+                                shutil.copy(file_path, f'{install_prefix}/lib')
                 
                 ## update timestamp
                 with open(timestamp, 'w') as f:
