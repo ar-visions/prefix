@@ -501,8 +501,8 @@ macro(address_sanitizer t_name)
         if (MSVC)
             #target_compile_options(${t_name} PRIVATE /fsanitize=address)
         else()
-            #target_compile_options(${t_name} PRIVATE -fsanitize=address)
-            #target_link_options(${t_name} PRIVATE -fsanitize=address)
+            target_compile_options(${t_name} PRIVATE -fsanitize=address)
+            target_link_options(${t_name} PRIVATE -fsanitize=address)
         endif()
     endif()
 endmacro()
@@ -604,10 +604,12 @@ macro(create_module_targets)
         # accumulate resources in binary based on targets post-built
         # ------------------------
         if(EXISTS ${p}/res)
+        
             add_custom_command(
                 TARGET ${t_name} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_directory
                 ${p}/res ${CMAKE_BINARY_DIR})
+
         endif()
 
         # test products
