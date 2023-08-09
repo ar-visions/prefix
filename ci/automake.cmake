@@ -2,7 +2,13 @@
 # --------------------------------------------------
 
 # [sync] run autoreconf -i to generate the configure script
-execute_process(COMMAND autoreconf "-i" RESULT_VARIABLE autoreconf WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+if (EXISTS "${CMAKE_SOURCE_DIR}/configure")
+    set(autoreconf "0")
+elseif (EXISTS "${CMAKE_SOURCE_DIR}/autogen.sh")
+    execute_process(COMMAND sh "autogen.sh" RESULT_VARIABLE autoreconf WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+else()
+    execute_process(COMMAND autoreconf "-i" RESULT_VARIABLE autoreconf WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endif()
 
 if (autoreconf STREQUAL "0")
     # [sync] run configure

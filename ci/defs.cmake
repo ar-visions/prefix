@@ -19,6 +19,7 @@ endif()
 if(WIN32)
     add_link_options(/ignore:4098)
     set (CMAKE_SYSTEM_VERSION 10.0.20348.0)
+    include_directories(C:/msys64/mingw64/include)
     #add_compile_options(/p:CharacterSet=Unicode)
 endif()
 
@@ -46,7 +47,7 @@ macro(set_defs)
 
     if(MSVC)
         # MD = required for c++ 23 modules
-        add_compile_options(/bigobj)
+        #add_compile_options(/bigobj)
         add_compile_options(
             $<$<CONFIG:>:/MD>
             $<$<CONFIG:Debug>:/MD>

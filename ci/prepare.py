@@ -7,7 +7,6 @@ import re
 import json
 import platform
 import hashlib
-#import requests
 import shutil
 import glob
 import zipfile
@@ -28,13 +27,36 @@ if 'CMAKE_BUILD_TYPE' in os.environ: del os.environ['CMAKE_BUILD_TYPE']
 if 'CPATH'            in os.environ: del os.environ['CPATH']
 if 'LIBRARY_PATH'     in os.environ: del os.environ['LIBRARY_PATH']
 
+def sys_type():
+    p = platform.system()
+    if p == 'Darwin':  return 'mac'
+    if p == 'Windows': return 'win'
+    if p == 'Linux':   return 'lin'
+    exit(1)
+
+p              = sys_type()
 pf_repo        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 install_prefix = f'{pf_repo}/install';
 extern_dir     = f'{pf_repo}/extern';
+gen_only       = os.environ.get('GEN_ONLY')
+exe            = ('.exe' if p == 'win' else '')
+dir            = os.path.dirname(os.path.abspath(__file__))
+common         = ['.cc',  '.c',   '.cpp', '.cxx', '.h',  '.hpp',
+                  '.ixx', '.hxx', '.rs',  '.py',  '.sh', '.txt', '.ini', '.json']
 
-gen_only  = os.environ.get('GEN_ONLY')
+everything = ["prefix"] # prefix with prefix.
+prefix_sym = f'{extern_dir}/prefix'
 
 os.environ['INSTALL_PREFIX'] = install_prefix
+
+os.chdir(pf_repo)
+
+if not os.path.exists('extern'):                 os.mkdir('extern')
+if not os.path.exists('install'):                os.mkdir('install')
+if not os.path.exists('install/lib'):            os.mkdir('install/lib')
+if not os.path.exists('install/lib/Frameworks'): os.mkdir('install/lib/Frameworks')
+
+if not os.path.exists(prefix_sym): os.symlink(pf_repo, prefix_sym, True)
 
 # Function to replace %NAME% with corresponding environment variable
 def replace_env_variables(match):
@@ -54,8 +76,6 @@ def replace_env(input_string):
         return os.environ.get(var_name, match.group(0))
     return re.sub(r'%([^%]+)%', repl, input_string)
 
-dir = os.path.dirname(os.path.abspath(__file__))
-
 # this only builds with cmake using a url with commit-id, optional diff
 def check(a):
     assert(a)
@@ -63,24 +83,24 @@ def check(a):
 
 def      parse(f): return f['name'] + '-' + f['version'], f['name'], f['version'], f.get('res'), f.get('sha256'), f.get('url'), f.get('commit'), f.get('libs'), f.get('includes'), f.get('bins')
 def    git(*args):
-    cmd = ['git'] + list(args)
+    cmd = ['git' + exe] + list(args)
     shell_cmd = ' '.join(cmd)
     print('> ', shell_cmd)
-    return subprocess.run(['git']   + list(args), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+    return subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
 def  cmake(*args):
-    cmd = ['cmake'] + list(args)
+    cmd = ['cmake' + exe] + list(args)
     shell_cmd = ' '.join(cmd)
     print('> ', shell_cmd)
     return subprocess.run(cmd, capture_output=True, text=True)
 
 def  make(*args):
-    cmd = ['make'] + list(args)
+    cmd = ['make' + exe] + list(args)
     shell_cmd = ' '.join(cmd)
     print('> ', shell_cmd)
     return subprocess.run(cmd, capture_output=True, text=True)
 
-def       build(): return  make()
+def       build(): return cmake('--build', '.')
 def  cm_install(): return cmake('--install', cm_build)
 def         gen(type, cmake_script_root, prefix_path, extra=None):
     build_type = type[0].upper() + type[1:].lower()
@@ -101,16 +121,6 @@ def         gen(type, cmake_script_root, prefix_path, extra=None):
     if extra:
         args.extend(extra)
     return cmake(*args)
-
-os.chdir(pf_repo)
-
-if not os.path.exists('extern'):                 os.mkdir('extern')
-if not os.path.exists('install'):                os.mkdir('install')
-if not os.path.exists('install/lib'):            os.mkdir('install/lib')
-if not os.path.exists('install/lib/Frameworks'): os.mkdir('install/lib/Frameworks')
-
-common = ['.cc',  '.c',   '.cpp', '.cxx', '.h',  '.hpp',
-          '.ixx', '.hxx', '.rs',  '.py',  '.sh', '.txt', '.ini', '.json']
 
 def latest_file(root_path, avoid = None):
     t_latest = 0
@@ -141,13 +151,6 @@ def latest_file(root_path, avoid = None):
                     n_latest = file_path
     ##
     return n_latest, t_latest
-
-def sys_type():
-    p = platform.system()
-    if p == 'Darwin':  return 'mac'
-    if p == 'Windows': return 'win'
-    if p == 'Linux':   return 'linux'
-    exit(1)
 
 def is_cached(this_src_dir, vname, mt_project):
     dst_build     = f'{this_src_dir}/{cm_build}'
@@ -209,7 +212,7 @@ def prepare_build(this_src_dir, fields, mt_project):
     if not cached:
         ## if there is resource, download it and verify sha256 (required field)
         if res:
-            res      = res.replace('%platform%', sys_type())
+            res      = res.replace('%platform%', p)
             response = requests.get(res)
             base     = os.path.basename(res)  # Extract the filename from the URL
             base     = base.split('?')[0] if '?' in base else base
@@ -256,20 +259,13 @@ def prepare_build(this_src_dir, fields, mt_project):
             
             diff_file = f'{build_dir}/{name}.diff'
             with open(diff_file, 'w') as d:
-                subprocess.run(['git', 'diff'], stdout=d)
+                subprocess.run(['git' + exe, 'diff'], stdout=d)
 
             print('diff-gen: ', diff_file)
     else:
         cached = True
     ##
     return dst, dst_build, timestamp, cached, vname, (not res) and url, libs, res, url
-
-# prefix with prefix.
-# the basic ci module is implicit here and purely going to just watch the .cmake for changes
-# a direct user of this would be ion:mx
-everything = ["prefix"]
-prefix_sym = f'{extern_dir}/prefix'
-if not os.path.exists(prefix_sym): os.symlink(pf_repo, prefix_sym, True)
 
 # create sym-link for each remote as f'{name}' as its first include entry, or the repo path if no includes
 # all peers are symlinked and imported first
@@ -312,7 +308,12 @@ def prepare_project(src_dir):
                 cmpath = cmake.get('path')
                 if cmpath:
                     cmake_script_root = cmpath
-                cmargs = cmake.get('args')
+                
+                if f'args-{p}' in cmake:
+                    cmargs = cmake.get(f'args-{p}')
+                else:
+                    cmargs = cmake.get('args')
+                
                 if cmargs:
                     cmake_args = cmargs
                 cmake_install_libs = cmake.get('install_libs')
@@ -329,18 +330,9 @@ def prepare_project(src_dir):
                     os.environ[key] = evalue
             
             platforms = fields.get('platforms')
-            if platforms:
-                p = platform.system()
-                keep = False
-                if p == 'Darwin'  and 'mac'   in platforms:
-                    keep = True
-                if p == 'Windows' and 'win'   in platforms:
-                    keep = True
-                if p == 'Linux'   and 'linux' in platforms:
-                    keep = True
-                if not keep:
-                    print(f'skipping {name:20} (platform omit)')
-                    continue
+            if platforms and not p in platforms:
+                print(f'skipping {name:20} (platform omit)')
+                continue
             
             ## check the timestamp here
             remote_path, remote_build_path, timestamp, cached, vname, is_git, libs, res, url = prepare_build(src_dir, fields, mt_project)
@@ -358,6 +350,7 @@ def prepare_project(src_dir):
                 prev_cwd = os.getcwd()
                 os.chdir(remote_build_path)
 
+                print(f'building {name}...')
                 build_res = build()
                 if build_res.returncode != 0:
                     print(build_res.stdout)

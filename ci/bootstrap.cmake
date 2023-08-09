@@ -22,7 +22,7 @@ endmacro()
 # install python from source on winblows
 macro(bootstrap_python)
     set_if(EXT WIN32 ".EXE" "")
-    set_if(SLA WIN32 "\\"   "/")
+    set_if(SLA WIN32 "/"   "/")
     set_if(SEP WIN32 "\;"   ":")
 
     find_program(PYTHON_EXECUTABLE python3)
