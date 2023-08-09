@@ -297,6 +297,7 @@ def prepare_project(src_dir):
                 continue
             h           = fields.get('hide')
             name        = fields['name']
+            url         = fields.get('url')
             cmake       = fields.get('cmake')
             environment = fields.get('environment')
             hide        = h == True or h == sys_type()
@@ -332,6 +333,17 @@ def prepare_project(src_dir):
             platforms = fields.get('platforms')
             if platforms and not p in platforms:
                 print(f'skipping {name:20} (platform omit)')
+                continue
+            
+            # dont gen/build resources (depot_tools is one such resource)
+            # resources do not contain a version; this is to make it easier to access by the projects
+            resource = fields.get('resource')
+            if resource == True:
+                prev_cwd = os.getcwd()
+                os.chdir(extern_dir)
+                if not os.path.exists(name):
+                    git('clone', '--recursive', url, name)
+                os.chdir(prev_cwd)
                 continue
             
             ## check the timestamp here
