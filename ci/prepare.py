@@ -81,7 +81,7 @@ def check(a):
     assert(a)
     return a
 
-def      parse(f): return f['name'] + '-' + f['version'], f['name'], f['version'], f.get('res'), f.get('sha256'), f.get('url'), f.get('commit'), f.get('libs'), f.get('includes'), f.get('bins')
+def      parse(f): return f['name'] + '-' + f['version'], f['name'], f['version'], f.get('res'), f.get('sha256'), f.get('url'), f.get('commit'), f.get('branch'), f.get('libs'), f.get('includes'), f.get('bins')
 def    git(*args):
     cmd = ['git' + exe] + list(args)
     shell_cmd = ' '.join(cmd)
@@ -187,7 +187,7 @@ def cp_deltree(src, dst, dirs_exist_ok=True):
 
 ## prepare an { object } of external repo
 def prepare_build(this_src_dir, fields, mt_project):
-    vname, name, version, res, sha256, url, commit, libs, includes, bins = parse(fields)
+    vname, name, version, res, sha256, url, commit, branch, libs, includes, bins = parse(fields)
 
     dst = f'{extern_dir}/{vname}'
 
@@ -236,8 +236,13 @@ def prepare_build(this_src_dir, fields, mt_project):
             if os.path.exists(diff_find): diff = diff_find
             if diff: git('reset', '--hard')
             ##
-            checkout = commit if commit else 'main'
-            git('checkout', checkout)
+            
+            if branch:
+                git('checkout', '-b', branch)
+            else:
+                checkout = commit if commit else 'main'
+                git('checkout', checkout)
+            
             ##
             if diff: git('apply', diff)
             
