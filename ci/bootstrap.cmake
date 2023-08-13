@@ -19,7 +19,7 @@ macro(assert_exists FILE DESC)
     endif()
 endmacro()
 
-# install python from source on winblows
+# install python from source on windows
 macro(bootstrap_python)
     set_if(EXT WIN32 ".EXE" "")
     set_if(SLA WIN32 "/"   "/")
