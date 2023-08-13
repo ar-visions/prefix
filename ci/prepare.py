@@ -348,6 +348,7 @@ def prepare_project(src_dir):
                 os.chdir(extern_dir)
                 if not os.path.exists(name):
                     git('clone', '--recursive', url, name)
+                    os.remove(name + '/.git')
                 os.chdir(prev_cwd)
                 continue
             
