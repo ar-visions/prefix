@@ -90,19 +90,14 @@ def    git(*args):
 
 def  cmake(*args):
     cmd = ['cmake' + exe] + list(args)
+
     shell_cmd = ' '.join(cmd)
     print('> ', shell_cmd)
     return subprocess.run(cmd, capture_output=True, text=True)
 
-def  make(*args):
-    cmd = ['make' + exe] + list(args)
-    shell_cmd = ' '.join(cmd)
-    print('> ', shell_cmd)
-    return subprocess.run(cmd, capture_output=True, text=True)
-
-def       build(): return cmake('--build', '.')
-def  cm_install(): return cmake('--install', cm_build)
-def         gen(type, cmake_script_root, prefix_path, extra=None):
+def       build(): return cmake('--build',   '.',      '--config', cfg)
+def  cm_install(): return cmake('--install', cm_build, '--config', cfg)
+def         gen(type, cmake_script_root, prefix_path, extra):
     build_type = type[0].upper() + type[1:].lower()
     args = ['-S', cmake_script_root,
             '-B', cm_build, 
@@ -118,8 +113,9 @@ def         gen(type, cmake_script_root, prefix_path, extra=None):
             '-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON', 
            f'-DCMAKE_BUILD_TYPE={build_type}'
     ]
-    if extra:
-        args.extend(extra)
+    ## if
+    if extra: args.extend(extra)
+    ##
     return cmake(*args)
 
 def latest_file(root_path, avoid = None):
@@ -322,6 +318,7 @@ def prepare_project(src_dir):
                 
                 if cmargs:
                     cmake_args = cmargs
+
                 cmake_install_libs = cmake.get('install_libs')
             
             # set environment variables to those with %VAR%
@@ -356,7 +353,7 @@ def prepare_project(src_dir):
             
             ## only building the src git repos; the resources are system specific builds
             if not cached and is_git:
-                gen_res = gen(cfg, cmake_script_root, prefix_path, cmake_args)
+                gen_res = gen(fields, cfg, cmake_script_root, prefix_path, cmake_args)
                 if gen_res.returncode != 0:
                     print(gen_res.stdout)
                     print(f'cmake generation errors for extern: {name}')
@@ -368,7 +365,7 @@ def prepare_project(src_dir):
                 os.chdir(remote_build_path)
 
                 print(f'building {name}...')
-                build_res = build()
+                build_res = build(fields)
                 if build_res.returncode != 0:
                     print(build_res.stdout)
                     print(f'build errors for extern: {name}')
