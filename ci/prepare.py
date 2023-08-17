@@ -81,23 +81,26 @@ def check(a):
     assert(a)
     return a
 
-def      parse(f): return f['name'] + '-' + f['version'], f['name'], f['version'], f.get('res'), f.get('sha256'), f.get('url'), f.get('commit'), f.get('branch'), f.get('libs'), f.get('includes'), f.get('bins')
-def    git(*args):
+def parse(f):
+    return f['name'] + '-' + f['version'], f['name'], f['version'], f.get('res'), f.get('sha256'), f.get('url'), f.get('commit'), f.get('branch'), f.get('libs'), f.get('includes'), f.get('bins')
+
+def git(fields, *args):
     cmd = ['git' + exe] + list(args)
     shell_cmd = ' '.join(cmd)
     print('> ', shell_cmd)
     return subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
-def  cmake(*args):
+def  cmake(fields, *args):
     cmd = ['cmake' + exe] + list(args)
 
     shell_cmd = ' '.join(cmd)
     print('> ', shell_cmd)
     return subprocess.run(cmd, capture_output=True, text=True)
 
-def       build(): return cmake('--build',   '.',      '--config', cfg)
-def  cm_install(): return cmake('--install', cm_build, '--config', cfg)
-def         gen(type, cmake_script_root, prefix_path, extra):
+def       build(fields):
+    return cmake('--build', '.', '--config', cfg)
+
+def         gen(fields, type, cmake_script_root, prefix_path, extra):
     build_type = type[0].upper() + type[1:].lower()
     args = ['-S', cmake_script_root,
             '-B', cm_build, 
@@ -117,6 +120,8 @@ def         gen(type, cmake_script_root, prefix_path, extra):
     if extra: args.extend(extra)
     ##
     return cmake(*args)
+
+def  cm_install(): return cmake('--install', cm_build, '--config', cfg)
 
 def latest_file(root_path, avoid = None):
     t_latest = 0
