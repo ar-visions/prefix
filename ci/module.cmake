@@ -286,7 +286,7 @@ function(read_project_json location name name_ucase version)
 
     set(${name}    ${package.name}    PARENT_SCOPE)
     set(${version} ${package.version} PARENT_SCOPE)
-
+    
     ## format the package-name from this-case to THIS_CASE
     string(TOUPPER       ${package.name}    pkg_name_ucase)
     string(REPLACE "-" "_" pkg_name_ucase ${pkg_name_ucase})

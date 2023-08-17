@@ -36,8 +36,9 @@ def sys_type():
 
 p              = sys_type()
 pf_repo        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-install_prefix = f'{pf_repo}/install';
-extern_dir     = f'{pf_repo}/extern';
+install_prefix = f'{pf_repo}/install'
+extern_dir     = f'{pf_repo}/extern'
+mingw_cmake    = f'{pf_repo}/ci/mingw-cmake.sh'
 gen_only       = os.environ.get('GEN_ONLY')
 exe            = ('.exe' if p == 'win' else '')
 dir            = os.path.dirname(os.path.abspath(__file__))
@@ -90,17 +91,18 @@ def git(fields, *args):
     print('> ', shell_cmd)
     return subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
-def  cmake(fields, *args):
+def cmake(fields, *args):
     cmd = ['cmake' + exe] + list(args)
-
+    if p == 'win' and 'mingw' in fields:
+        cmd = ['c:/msys64/bin/mingw64' + exe] + [mingw_cmake] + cmd # support different archs in mingw
     shell_cmd = ' '.join(cmd)
     print('> ', shell_cmd)
     return subprocess.run(cmd, capture_output=True, text=True)
 
-def       build(fields):
+def build(fields):
     return cmake('--build', '.', '--config', cfg)
 
-def         gen(fields, type, cmake_script_root, prefix_path, extra):
+def gen(fields, type, cmake_script_root, prefix_path, extra):
     build_type = type[0].upper() + type[1:].lower()
     args = ['-S', cmake_script_root,
             '-B', cm_build, 
