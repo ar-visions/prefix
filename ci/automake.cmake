@@ -12,6 +12,7 @@ endif()
 
 if (autoreconf STREQUAL "0")
     # [sync] run configure
+    message(STATUS "prefix = ${CMAKE_INSTALL_PREFIX}")
     execute_process(COMMAND sh "./configure" "--prefix=${CMAKE_INSTALL_PREFIX}"
         RESULT_VARIABLE configure WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     if(NOT configure EQUAL 0)

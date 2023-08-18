@@ -86,21 +86,21 @@ def parse(f):
     return f['name'] + '-' + f['version'], f['name'], f['version'], f.get('res'), f.get('sha256'), f.get('url'), f.get('commit'), f.get('branch'), f.get('libs'), f.get('includes'), f.get('bins')
 
 def git(fields, *args):
+    print(' --> current dir: ', os.getcwd())
     cmd = ['git' + exe] + list(args)
     shell_cmd = ' '.join(cmd)
     print('> ', shell_cmd)
     return subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
 def cmake(fields, *args):
+    print(' --> current dir: ', os.getcwd())
     cmd = ['cmake' + exe] + list(args)
-    if p == 'win' and 'mingw' in fields:
-        cmd = ['c:/msys64/bin/mingw64' + exe] + [mingw_cmake] + cmd # support different archs in mingw
     shell_cmd = ' '.join(cmd)
     print('> ', shell_cmd)
     return subprocess.run(cmd, capture_output=True, text=True)
 
 def build(fields):
-    return cmake('--build', '.', '--config', cfg)
+    return cmake(fields, '--build', '.', '--config', cfg)
 
 def gen(fields, type, cmake_script_root, prefix_path, extra):
     build_type = type[0].upper() + type[1:].lower()
@@ -121,9 +121,16 @@ def gen(fields, type, cmake_script_root, prefix_path, extra):
     ## if
     if extra: args.extend(extra)
     ##
-    return cmake(*args)
+    cm = fields.get('cmake')
+    if cm:
+        gen_key = f'gen-{p}'
+        if gen_key in cm:
+            print('running gen script:', cm[gen_key])
+            return subprocess.run(cm[gen_key], capture_output=True, text=True)
+    
+    return cmake(fields, *args)
 
-def  cm_install(): return cmake('--install', cm_build, '--config', cfg)
+def  cm_install(fields): return cmake(fields, '--install', cm_build, '--config', cfg)
 
 def latest_file(root_path, avoid = None):
     t_latest = 0
@@ -230,24 +237,24 @@ def prepare_build(this_src_dir, fields, mt_project):
         elif url:
             os.chdir(extern_dir)
             if not os.path.exists(vname):
-                git('clone', '--recursive', url, vname)
+                git(fields, 'clone', '--recursive', url, vname)
             os.chdir(vname)
-            git('fetch')
+            git(fields, 'fetch')
             diff_find = f'{this_src_dir}/diff/{name}.diff' # it might be of value to store diffs in prefix.
             diff      = None
             ##
             if os.path.exists(diff_find): diff = diff_find
-            if diff: git('reset', '--hard')
+            if diff: git(fields, 'reset', '--hard')
             ##
             
             if branch:
-                git('checkout', '-b', branch)
+                git(fields, 'checkout', '-b', branch)
             else:
                 checkout = commit if commit else 'main'
-                git('checkout', checkout)
+                git(fields, 'checkout', checkout)
             
             ##
-            if diff: git('apply', diff)
+            if diff: git(fields, 'apply', diff)
             
         ## overlay files; not quite as good as diff but its easier to manipulate
         overlay = f'{this_src_dir}/overlays/{name}'
@@ -325,6 +332,13 @@ def prepare_project(src_dir):
                 
                 if cmargs:
                     cmake_args = cmargs
+                    for i in range(len(cmake_args)):
+                        v = cmake_args[i]
+                        tmpl = "%PREFIX%"
+                        v = v.replace("%PREFIX%", install_prefix)
+                        if (cmake_args[i] != v):
+                            print('setting arg: ', v)
+                            cmake_args[i]  = v
 
                 cmake_install_libs = cmake.get('install_libs')
             
@@ -351,7 +365,7 @@ def prepare_project(src_dir):
                 prev_cwd = os.getcwd()
                 os.chdir(extern_dir)
                 if not os.path.exists(name):
-                    git('clone', '--recursive', url, name)
+                    git(fields, 'clone', '--recursive', url, name)
                 os.chdir(prev_cwd)
                 continue
             
@@ -383,7 +397,7 @@ def prepare_project(src_dir):
                 
                 # something with libs is just a declaration with an environment variable usually, already installed in effect if there are libs
                 if not libs:
-                    install_res = cm_install()
+                    install_res = cm_install(fields)
                     if install_res.returncode != 0:
                         print(install_res.stdout)
                         print(f'install errors for extern: {name}')
