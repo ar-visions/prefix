@@ -49,6 +49,7 @@ everything = ["prefix"] # prefix with prefix.
 prefix_sym = f'{extern_dir}/prefix'
 
 os.environ['INSTALL_PREFIX'] = install_prefix
+os.environ["PKG_CONFIG_PATH"] = install_prefix + '/lib/pkgconfig'
 
 os.chdir(pf_repo)
 
@@ -58,6 +59,9 @@ if not os.path.exists('install/lib'):            os.mkdir('install/lib')
 if not os.path.exists('install/lib/Frameworks'): os.mkdir('install/lib/Frameworks')
 
 if not os.path.exists(prefix_sym): os.symlink(pf_repo, prefix_sym, True)
+
+
+
 
 # Function to replace %NAME% with corresponding environment variable
 def replace_env_variables(match):
