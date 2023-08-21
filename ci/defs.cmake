@@ -49,9 +49,9 @@ macro(set_defs)
         # MD = required for c++ 23 modules
         #add_compile_options(/bigobj)
         add_compile_options(
-            $<$<CONFIG:>:/MD>
-            $<$<CONFIG:Debug>:/MD>
-            $<$<CONFIG:Release>:/MD>
+            $<$<CONFIG:>:/MT>
+            $<$<CONFIG:Debug>:/MT>
+            $<$<CONFIG:Release>:/MT>
         )
     endif()
 
