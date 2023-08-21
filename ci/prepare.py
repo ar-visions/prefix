@@ -13,9 +13,17 @@ import zipfile
 from datetime import datetime
 from datetime import timedelta
 
+def sys_type():
+    p = platform.system()
+    if p == 'Darwin':  return 'mac'
+    if p == 'Windows': return 'win'
+    if p == 'Linux':   return 'lin'
+    exit(1)
+
+p         = sys_type()
 src_dir   = os.environ.get('CMAKE_SOURCE_DIR')
 build_dir = os.environ.get('CMAKE_BINARY_DIR')
-cfg       = os.environ.get('CMAKE_BUILD_TYPE')
+cfg       = os.environ.get('CMAKE_BUILD_TYPE') if p != 'win' else 'Release' # externals are Release-built on windows
 js_path   = os.environ.get('JSON_IMPORT_INDEX')
 io_res    = f'{build_dir}/io/res'
 cm_build  = 'ion-build'
@@ -27,14 +35,6 @@ if 'CMAKE_BUILD_TYPE' in os.environ: del os.environ['CMAKE_BUILD_TYPE']
 if 'CPATH'            in os.environ: del os.environ['CPATH']
 if 'LIBRARY_PATH'     in os.environ: del os.environ['LIBRARY_PATH']
 
-def sys_type():
-    p = platform.system()
-    if p == 'Darwin':  return 'mac'
-    if p == 'Windows': return 'win'
-    if p == 'Linux':   return 'lin'
-    exit(1)
-
-p              = sys_type()
 pf_repo        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 install_prefix = f'{pf_repo}/install'
 extern_dir     = f'{pf_repo}/extern'
@@ -107,7 +107,7 @@ def build(fields):
     return cmake(fields, '--build', '.', '--config', cfg)
 
 def gen(fields, type, cmake_script_root, prefix_path, extra):
-    build_type = type[0].upper() + type[1:].lower()
+    build_type = type[0].upper() + type[1:].lower() 
     args = ['-S', cmake_script_root,
             '-B', cm_build, 
            f'-DCI=\'{pf_repo}/ci\'',
