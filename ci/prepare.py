@@ -320,15 +320,11 @@ def prepare_project(src_dir):
             cmake       = fields.get('cmake')
             environment = fields.get('environment')
             hide        = h == True or h == sys_type()
-            cmake_script_root = '.'
+            cmake_script_root = (cmake.get('path') if cmake.get('path') else '.') if cmake else '.'
             cmake_args  = []
             cmake_install_libs = None
             
             if cmake:
-                cmpath = cmake.get('path')
-                if cmpath:
-                    cmake_script_root = cmpath
-                
                 if f'args-{p}' in cmake:
                     cmargs = cmake.get(f'args-{p}')
                 else:
