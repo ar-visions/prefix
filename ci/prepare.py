@@ -87,7 +87,7 @@ def check(a):
     return a
 
 def parse(f):
-    return f['name'] + '-' + f['version'], f['name'], f['version'], f.get('res'), f.get('sha256'), f.get('url'), f.get('commit'), f.get('branch'), f.get('libs'), f.get('includes'), f.get('bins')
+    return f['name'], f['name'], f['version'], f.get('res'), f.get('sha256'), f.get('url'), f.get('commit'), f.get('branch'), f.get('libs'), f.get('includes'), f.get('bins')
 
 def git(fields, *args):
     print(' --> current dir: ', os.getcwd())
@@ -242,6 +242,8 @@ def prepare_build(this_src_dir, fields, mt_project):
             os.chdir(extern_dir)
             if not os.path.exists(vname):
                 git(fields, 'clone', '--recursive', url, vname)
+                if(fields.get('git')):
+                    git(fields, *fields['git'])
             os.chdir(vname)
             git(fields, 'fetch')
             diff_find = f'{this_src_dir}/diff/{name}.diff' # it might be of value to store diffs in prefix.
