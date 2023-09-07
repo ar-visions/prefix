@@ -204,18 +204,6 @@ def prepare_build(this_src_dir, fields, mt_project):
     vname, name, version, res, sha256, url, commit, branch, libs, includes, bins = parse(fields)
 
     dst = f'{extern_dir}/{vname}'
-
-    ## overlay files -- this is an effective workflow for getting to a .diff
-    ## use overlays while its still being hammered out and once you want 
-    ## to forget it just use the generated diff in build folder
-
-
-    # 
-    #overlay = f'{this_src_dir}/overlays/{name}'
-    #if os.path.exists(overlay):
-    #    cp_deltree(overlay, dst, dirs_exist_ok=True)
-    #    diff_file = f'{build_dir}/{name}.diff'
-    #
       
     dst_build, timestamp, cached = is_cached(dst, vname, mt_project)
 
@@ -278,11 +266,10 @@ def prepare_build(this_src_dir, fields, mt_project):
                 with open(file, 'a') as contents:
                     contents.write('\r\ninclude(mod)\r\n')
             
-            diff_file = f'{build_dir}/{name}.diff'
-            with open(diff_file, 'w') as d:
-                subprocess.run(['git' + exe, 'diff'], stdout=d)
-
-            print('diff-gen: ', diff_file)
+        diff_file = f'{build_dir}/{name}.diff'
+        with open(diff_file, 'w') as d:
+            subprocess.run(['git' + exe, 'diff'], stdout=d)
+        print('diff-gen: ', diff_file)
     else:
         cached = True
     ##
@@ -363,19 +350,12 @@ def prepare_project(src_dir):
             # dont gen/build resources (depot_tools is one such resource)
             # resources do not contain a version; this is to make it easier to access by the projects
             resource = fields.get('resource')
-            if resource == True:
-                prev_cwd = os.getcwd()
-                os.chdir(extern_dir)
-                if not os.path.exists(name):
-                    git(fields, 'clone', '--recursive', url, name)
-                os.chdir(prev_cwd)
-                continue
             
             ## check the timestamp here
             remote_path, remote_build_path, timestamp, cached, vname, is_git, libs, res, url = prepare_build(src_dir, fields, mt_project)
             
             ## only building the src git repos; the resources are system specific builds
-            if not cached and is_git:
+            if not cached and is_git and not resource:
                 gen_res = gen(fields, cfg, cmake_script_root, prefix_path, cmake_args)
                 if gen_res.returncode != 0:
                     print(gen_res.stdout)
