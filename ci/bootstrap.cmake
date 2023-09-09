@@ -96,9 +96,9 @@ function(main)
     # bootstrap python with pip packages
     bootstrap_python(requests)
 
-    # now that we have prepared python.. we can run prepare.py
+    # now that we have prepared python.. we can run prep.py
     execute_process(
-        COMMAND ${PYTHON} "${CI_DIR}/prepare.py" RESULT_VARIABLE import_result)
+        COMMAND ${PYTHON} "${CI_DIR}/prep.py" RESULT_VARIABLE import_result)
 
     # its written to and valid if this import_result equals 0, no need to delete
     if (NOT (import_result EQUAL "0"))

@@ -212,6 +212,7 @@ def prepare_build(this_src_dir, fields, mt_project):
     if includes: fields['includes'] = [re.sub(r'%([^%]+)%', replace_env_variables, s) for s in fields['includes']]
 
     if not cached:
+        first_checkout = False
         ## if there is resource, download it and verify sha256 (required field)
         if res:
             res      = res.replace('%platform%', p)
@@ -229,6 +230,7 @@ def prepare_build(this_src_dir, fields, mt_project):
         elif url:
             os.chdir(extern_dir)
             if not os.path.exists(vname):
+                first_checkout = True
                 git(fields, 'clone', '--recursive', url, vname)
                 if(fields.get('git')):
                     git(fields, *fields['git'])
@@ -266,6 +268,23 @@ def prepare_build(this_src_dir, fields, mt_project):
                 with open(file, 'a') as contents:
                     contents.write('\r\ninclude(mod)\r\n')
             
+        # run script to process repo if it had just been checked out
+        
+        # here we have a bit of cache control so we dont have to re-checkout repos when we rerun the script to tune for success
+        first_cmd = fields.get('script')
+        if first_cmd and not os.path.exists('.script.success'):
+            print(f'[{vname}] running: {first_cmd}')
+            script = subprocess.run(first_cmd, capture_output=True, text=True)
+            print(script.stdout)
+            if script.returncode != 0:
+                print('error from script')
+                exit(1)
+            else:
+                file = f'.script.success'
+                with open(file, 'w') as contents:
+                    contents.write(script.stdout)
+            
+
         diff_file = f'{build_dir}/{name}.diff'
         with open(diff_file, 'w') as d:
             subprocess.run(['git' + exe, 'diff'], stdout=d)

@@ -1,2 +1,2 @@
 # cmake declares python as artifact.  this just lets us rebuild when it changes; any user of ci monitors this one
-artifacts(prepare.py)
+artifacts(prep.py)

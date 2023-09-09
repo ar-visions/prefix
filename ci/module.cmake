@@ -457,8 +457,8 @@ macro(process_dep d t_name)
                         endif()
                     endforeach()
 
-                    ## prepare.py needs to be set as Resource, would need to be associated to a build module
-                    ## its probably a good idea to have the mods have src(../ci/prepare.py)
+                    ## prep.py needs to be set as Resource, would need to be associated to a build module
+                    ## its probably a good idea to have the mods have src(../ci/prep.py)
                     ## symlink bins into CMAKE_BINARY_DIR; having a PATH for this doesnt work
                     foreach (bin_dir ${import.${import}.bins})
                         file(GLOB bin_files "${bin_dir}/*")
@@ -514,6 +514,7 @@ macro(address_sanitizer t_name)
         if (MSVC)
             #target_compile_options(${t_name} PRIVATE /fsanitize=address)
         else()
+            # introduces linking errors in linux now; i think i havent used gcc with this yet, though
             #target_compile_options(${t_name} PRIVATE -fsanitize=address)
             #target_link_options(${t_name} PRIVATE -fsanitize=address)
         endif()
