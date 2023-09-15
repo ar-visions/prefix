@@ -357,6 +357,8 @@ function(select_library t_name d)
     endif()
 
     find_package(${d} CONFIG QUIET)
+
+
     
     if(${d}_FOUND)
         if(TARGET ${d}::${d})
@@ -370,7 +372,7 @@ function(select_library t_name d)
     elseif(TARGET ${d})
         #message(STATUS "(target) ${t_name} -> ${d}")
         target_link_libraries(${t_name} ${linkage} ${d})
-        set(${d}_DIR "system" CACHE INTERNAL "") # quiet up cmake
+        #set(${d}_DIR "system" CACHE INTERNAL "") # quiet up cmake
     else()
         find_package(${d} QUIET)
         if(${d}_FOUND)
@@ -381,16 +383,18 @@ function(select_library t_name d)
                 target_link_libraries(${t_name} ${linkage} ${d})
             endif()
         else()
-            find_library(${d}_FW ${d} QUIET)
-            if(${d}_FW)
-                #message(STATUS "(framework) ${t_name} -> ${${d}_FW}")
-                target_link_libraries(${t_name} ${linkage} ${${d}_FW})
-            else()
-                #message(STATUS "(system) ${t_name} -> ${d}")
-                target_link_libraries(${t_name} ${linkage} ${d})
-                set(${d}_FW "system" CACHE INTERNAL "") # quiet up cmake
+            find_library(${d}_FW QUIET)
+            if(NOT ${d}_FW STREQUAL "system") # i forget why we had _FW lookups; deprecate
+                if(${d}_FW)
+                    message(STATUS "(framework) ${t_name} -> ${${d}_FW}")
+                    target_link_libraries(${t_name} ${linkage} ${${d}_FW})
+                else()
+                    #message(STATUS "(system) ${t_name} -> ${d}")
+                    target_link_libraries(${t_name} ${linkage} ${d})
+                    #set(${d}_FW "system" CACHE INTERNAL "") # quiet up cmake
+                endif()
+                #set(${d}_DIR "system" CACHE INTERNAL "") # quiet up cmake
             endif()
-            set(${d}_DIR "system" CACHE INTERNAL "") # quiet up cmake
         endif()
         #
     endif()

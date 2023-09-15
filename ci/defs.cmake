@@ -42,6 +42,10 @@ macro(set_if var cond val else_val)
     endif()
 endmacro()
 
+macro(exit c)
+    print("exiting with code ${c}")
+endmacro()
+
 macro(set_defs)
     set(CMAKE_SUPPRESS_REGENERATION false)
 
