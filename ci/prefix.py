@@ -103,7 +103,7 @@ def cmake(fields, *args):
     print('> ', shell_cmd)
     return subprocess.run(cmd, capture_output=True, text=True)
 
-def build(fields, project_root):
+def build(fields):
     return cmake(fields, '--build', '.', '--config', cfg)
 
 def gen(fields, type, project_root, prefix_path, extra):
@@ -390,7 +390,7 @@ def prepare_project(src_dir):
                 os.chdir(remote_build_path)
 
                 print(f'building {name}...')
-                build_res = build(fields, project_root)
+                build_res = build(fields)
                 if build_res.returncode != 0:
                     print(build_res.stdout)
                     print(f'build errors for extern: {name}')

@@ -461,8 +461,8 @@ macro(process_dep d t_name)
                         endif()
                     endforeach()
 
-                    ## prep.py needs to be set as Resource, would need to be associated to a build module
-                    ## its probably a good idea to have the mods have src(../ci/prep.py)
+                    ## prefix.py needs to be set as Resource, would need to be associated to a build module
+                    ## its probably a good idea to have the mods have src(../ci/prefix.py)
                     ## symlink bins into CMAKE_BINARY_DIR; having a PATH for this doesnt work
                     foreach (bin_dir ${import.${import}.bins})
                         file(GLOB bin_files "${bin_dir}/*")
