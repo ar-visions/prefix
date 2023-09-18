@@ -103,12 +103,12 @@ def cmake(fields, *args):
     print('> ', shell_cmd)
     return subprocess.run(cmd, capture_output=True, text=True)
 
-def build(fields):
+def build(fields, project_root):
     return cmake(fields, '--build', '.', '--config', cfg)
 
-def gen(fields, type, cmake_script_root, prefix_path, extra):
+def gen(fields, type, project_root, prefix_path, extra):
     build_type = type[0].upper() + type[1:].lower() 
-    args = ['-S', cmake_script_root,
+    args = ['-S', project_root,
             '-B', cm_build, 
            f'-DCI=\'{pf_repo}/ci\'',
            #f'-DCMAKE_SYSTEM_PREFIX_PATH=\'{src_dir}/../ion/ci;{install_prefix}/lib/cmake\'',
@@ -328,7 +328,10 @@ def prepare_project(src_dir):
             cmake       = fields.get('cmake')
             environment = fields.get('environment')
             hide        = h == True or h == sys_type()
-            cmake_script_root = (cmake.get('path') if cmake.get('path') else '.') if cmake else '.'
+            project_root = '.'
+            if cmake and cmake.get('path'):
+                project_root = cmake.get('path')
+            
             cmake_args  = []
             cmake_install_libs = None
             
@@ -375,7 +378,7 @@ def prepare_project(src_dir):
             
             ## only building the src git repos; the resources are system specific builds
             if not cached and is_git and not resource:
-                gen_res = gen(fields, cfg, cmake_script_root, prefix_path, cmake_args)
+                gen_res = gen(fields, cfg, project_root, prefix_path, cmake_args)
                 if gen_res.returncode != 0:
                     print(gen_res.stdout)
                     print(f'cmake generation errors for extern: {name}')
@@ -387,7 +390,7 @@ def prepare_project(src_dir):
                 os.chdir(remote_build_path)
 
                 print(f'building {name}...')
-                build_res = build(fields)
+                build_res = build(fields, project_root)
                 if build_res.returncode != 0:
                     print(build_res.stdout)
                     print(f'build errors for extern: {name}')
