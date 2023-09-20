@@ -2,3 +2,5 @@
 /extern
 /build*
 .DS_Store
+/install
+/toolchain/*

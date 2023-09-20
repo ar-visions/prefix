@@ -20,13 +20,15 @@ def sys_type():
     if p == 'Linux':   return 'lin'
     exit(1)
 
-p         = sys_type()
-src_dir   = os.environ.get('CMAKE_SOURCE_DIR')
-build_dir = os.environ.get('CMAKE_BINARY_DIR')
-cfg       = os.environ.get('CMAKE_BUILD_TYPE') if p != 'win' else 'Release' # externals are Release-built on windows
-js_path   = os.environ.get('JSON_IMPORT_INDEX')
-io_res    = f'{build_dir}/io/res'
-cm_build  = 'ion-build'
+p              = sys_type()
+src_dir        = os.environ.get('CMAKE_SOURCE_DIR')
+build_dir      = os.environ.get('CMAKE_BINARY_DIR')
+sdk            = os.environ.get('SDK') if os.environ.get('SDK') else 'native'
+cfg            = os.environ.get('CMAKE_BUILD_TYPE') if p != 'win' else 'Release' # externals are Release-built on windows
+js_import_path = os.environ.get('JSON_IMPORT_INDEX')
+js_sdk_path    = os.environ.get('JSON_SDK_INDEX')
+io_res         = f'{build_dir}/io/res'
+cm_build       = 'build' + ('' if sdk == 'native' else f'-{sdk}') # probably call this build or build-sdk
 
 if 'CMAKE_SOURCE_DIR' in os.environ: del os.environ['CMAKE_SOURCE_DIR']
 if 'CMAKE_BINARY_DIR' in os.environ: del os.environ['CMAKE_BINARY_DIR']
@@ -36,16 +38,18 @@ if 'CPATH'            in os.environ: del os.environ['CPATH']
 if 'LIBRARY_PATH'     in os.environ: del os.environ['LIBRARY_PATH']
 
 pf_repo        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-install_prefix = f'{pf_repo}/install'
-extern_dir     = f'{pf_repo}/extern'
-mingw_cmake    = f'{pf_repo}/ci/mingw-cmake.sh'
+install_dir    = f'install/{sdk}'
+install_prefix = f'{pf_repo}/{install_dir}'
+extern_dir     = f'{pf_repo}/extern' # we put different build dirs for the different sdks in here.  it would be ludacrous to checkout more?...
+mingw_cmake    = f'{pf_repo}/ci/mingw-cmake.sh' # oh boy we need to properly use mingw on windows, as its just not going to work supporting native land only.  it means the skia overlay we can bring back
 gen_only       = os.environ.get('GEN_ONLY')
 exe            = ('.exe' if p == 'win' else '')
 dir            = os.path.dirname(os.path.abspath(__file__))
 common         = ['.cc',  '.c',   '.cpp', '.cxx', '.h',  '.hpp',
                   '.ixx', '.hxx', '.rs',  '.py',  '.sh', '.txt', '.ini', '.json']
 
-everything = ["prefix"] # prefix with prefix.
+every_import = ["prefix"] # prefix with prefix.
+every_sdk    = [{"name":"native", "args":{}}]
 prefix_sym = f'{extern_dir}/prefix'
 
 os.environ['INSTALL_PREFIX'] = install_prefix
@@ -53,10 +57,13 @@ os.environ["PKG_CONFIG_PATH"] = install_prefix + '/lib/pkgconfig'
 
 os.chdir(pf_repo)
 
-if not os.path.exists('extern'):                 os.mkdir('extern')
-if not os.path.exists('install'):                os.mkdir('install')
-if not os.path.exists('install/lib'):            os.mkdir('install/lib')
-if not os.path.exists('install/lib/Frameworks'): os.mkdir('install/lib/Frameworks')
+if not os.path.exists('extern'):             os.mkdir('extern')
+if not os.path.exists('install'):            os.mkdir('install')
+if not os.path.exists(install_dir):          os.mkdir(install_dir)
+if not os.path.exists(f'{install_dir}/lib'): os.mkdir(f'{install_dir}/lib')
+
+if not os.path.exists(f'{install_dir}/lib/Frameworks'):
+    os.mkdir(f'{install_dir}/lib/Frameworks')
 
 if not os.path.exists(prefix_sym): os.symlink(pf_repo, prefix_sym, True)
 
@@ -294,29 +301,48 @@ def prepare_build(this_src_dir, fields, mt_project):
     ##
     return dst, dst_build, timestamp, cached, vname, (not res) and url, libs, res, url
 
+# we are reading json twice but this is not so costly
+def prepare_sdk(src_dir):
+    project_file = src_dir + '/project.json'
+    with open(project_file, 'r') as project_contents:
+        project_json = json.load(project_contents)
+        import_list  = project_json['import']
+        sdk_list     = project_json['sdk']
+        if sdk_list:
+            for item in sdk_list:
+                every_sdk.append(item)
+        for fields in import_list:
+            if isinstance(fields, str):
+                if fields in every_import:
+                    continue
+                rel_peer = f'{src_dir}/../{fields}'
+                prepare_sdk(rel_peer)
+
 # create sym-link for each remote as f'{name}' as its first include entry, or the repo path if no includes
 # all peers are symlinked and imported first
 def prepare_project(src_dir):
     project_file = src_dir + '/project.json'
     with open(project_file, 'r') as project_contents:
         print('loading: ', project_file)
+
         project_json = json.load(project_contents)
         import_list  = project_json['import']
         mt_project   = os.path.getmtime(project_file)
-
+        
         ## import the peers first, which have their own index (fetch first!)
         ## it should build while checking out
         for fields in import_list:
             if isinstance(fields, str):
-                if fields in everything:
+                if fields in every_import:
                     continue
                 rel_peer = f'{src_dir}/../{fields}'
                 sym_peer = f'{extern_dir}/{fields}'
                 if not os.path.exists(sym_peer): os.symlink(rel_peer, sym_peer, True)
                 assert(os.path.islink(sym_peer))
                 prepare_project(rel_peer) # recurse into project, pulling its things too
-            everything.append(fields)
+            every_import.append(fields)
 
+        # at this point, it has everything in 
         ## now prep gen and build
         prefix_path = install_prefix
         for fields in import_list:
@@ -339,8 +365,7 @@ def prepare_project(src_dir):
                 if f'args-{p}' in cmake:
                     cmargs = cmake.get(f'args-{p}')
                 else:
-                    cmargs = cmake.get('args')
-                
+                    cmargs = cmake.get('args') # 'string' is a format string in silver? the double quotes block out the expressions?
                 if cmargs:
                     cmake_args = cmargs
                     for i in range(len(cmake_args)):
@@ -421,9 +446,14 @@ def prepare_project(src_dir):
                 with open(timestamp, 'w') as f:
                     f.write('')
 
+# sdk are defined by any project used, so we accumulate those first
+# if not, we arent generating our cmake correctly because it needs a compiler set along with other args
+# we run cmake -C toolchain-generated-file-on-our-end.cmake
+prepare_sdk(src_dir)
+
 # prepare project recursively
 prepare_project(src_dir)
 
 # output everything discovered in original order
-with open(js_path, "w") as out:
-    json.dump(everything, out)
+with open(js_import_path, "w") as out:
+    json.dump(every_import, out)

@@ -1,5 +1,34 @@
 {
     "name":   "prefix",
     "version":"dev",
-    "import": []
+    "import": [],
+    "sdk": [
+        {
+            "name": "native",
+            "args": {}
+        },
+        {
+            "name": "aarch64-linux-gnu",
+            "args": {
+                "CMAKE_C_COMPILER":                     "aarch64-linux-gnu-gcc",
+                "CMAKE_CXX_COMPILER":                   "aarch64-linux-gnu-g++",
+                "CMAKE_FIND_ROOT_PATH":                 "%TOOLCHAIN_PATH%",
+                "CMAKE_FIND_ROOT_PATH_MODE_PROGRAM":    "NEVER",
+                "CMAKE_FIND_ROOT_PATH_MODE_LIBRARY":    "ONLY",
+                "CMAKE_FIND_ROOT_PATH_MODE_INCLUDE":    "ONLY"
+            },
+            "support": [
+                {
+                    "host":     "lin",
+                    "arch":     "x86_64", 
+                    "binary":   "https://developer.arm.com/-/media/Files/downloads/gnu/12.3.rel1/binrel/arm-gnu-toolchain-12.3.rel1-x86_64-aarch64-none-linux-gnu.tar.xz?rev=cf8baa0ef2e54e9286f0409cdda4f66c&hash=4E1BA6BFC2C09EA04DBD36C393C9DD3A"
+                },
+                {
+                    "host":     "win",
+                    "arch":     "x86_64", 
+                    "binary":   "https://developer.arm.com/-/media/Files/downloads/gnu/12.3.rel1/binrel/arm-gnu-toolchain-12.3.rel1-mingw-w64-i686-aarch64-none-linux-gnu.zip?rev=07a765837ffc4b97934d288e698cd95f&hash=4D60E28111E187A4465C6BA90E2D39B3"
+                }
+            ]
+        }
+    ]
 }
