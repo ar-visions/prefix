@@ -48,12 +48,12 @@ dir            = os.path.dirname(os.path.abspath(__file__))
 common         = ['.cc',  '.c',   '.cpp', '.cxx', '.h',  '.hpp',
                   '.ixx', '.hxx', '.rs',  '.py',  '.sh', '.txt', '.ini', '.json']
 
-every_import = ["prefix"] # prefix with prefix.
-every_sdk    = [{"name":"native", "args":{}}]
+every_import = ['prefix'] # prefix with prefix.
+every_sdk    = [{'name':'native', 'args':{}}]
 prefix_sym = f'{extern_dir}/prefix'
 
 os.environ['INSTALL_PREFIX'] = install_prefix
-os.environ["PKG_CONFIG_PATH"] = install_prefix + '/lib/pkgconfig'
+os.environ['PKG_CONFIG_PATH'] = install_prefix + '/lib/pkgconfig'
 
 os.chdir(pf_repo)
 
@@ -77,8 +77,8 @@ def replace_env_variables(match):
 
 def sha256_file(file_path):
     sha256_hash = hashlib.sha256()
-    with open(file_path, "rb") as file:
-        for chunk in iter(lambda: file.read(4096), b""):
+    with open(file_path, 'rb') as file:
+        for chunk in iter(lambda: file.read(4096), b''):
             sha256_hash.update(chunk)
     return sha256_hash.hexdigest()
 
@@ -229,7 +229,7 @@ def prepare_build(this_src_dir, fields, mt_project):
             res_zip  = os.path.join(io_res, base)  # Path to save the downloaded zip file
             os.makedirs(io_res, exist_ok=True)
             ##
-            with open(res_zip, "wb") as file: file.write(response.content)
+            with open(res_zip, 'wb') as file: file.write(response.content)
             ##
             digest = sha256_file(res_zip)
             if digest != sha256: print(f'sha256 checksum failure in project {name}: checksum for {res}: {digest}')
@@ -370,8 +370,8 @@ def prepare_project(src_dir):
                     cmake_args = cmargs
                     for i in range(len(cmake_args)):
                         v = cmake_args[i]
-                        tmpl = "%PREFIX%"
-                        v = v.replace("%PREFIX%", install_prefix)
+                        tmpl = '%PREFIX%'
+                        v = v.replace('%PREFIX%', install_prefix)
                         if (cmake_args[i] != v):
                             print('setting arg: ', v)
                             cmake_args[i]  = v
@@ -383,7 +383,7 @@ def prepare_project(src_dir):
                 for key, evalue in environment.items():
                     if '%' in evalue:
                         for env_var, var_value in os.environ.items():
-                            tmpl = "%" + env_var + "%"
+                            tmpl = '%' + env_var + '%'
                             v    = evalue.replace(tmpl, var_value)
                             if v != evalue:
                                 evalue = v
@@ -455,5 +455,5 @@ prepare_sdk(src_dir)
 prepare_project(src_dir)
 
 # output everything discovered in original order
-with open(js_import_path, "w") as out:
+with open(js_import_path, 'w') as out:
     json.dump(every_import, out)
