@@ -272,15 +272,13 @@ def prepare_build(this_src_dir, fields, mt_project):
                 commit = subprocess.check_output(cmd).decode('utf-8').strip()
             if not commit:
                 commit = 'main'
-            
+            ##
             git(fields, 'checkout', commit)
             if diff: git(fields, 'apply', '--reject', '--ignore-space-change', '--ignore-whitespace', '--whitespace=fix', diff)
 
         ## overlay files; not quite as good as diff but its easier to manipulate
         overlay = f'{this_src_dir}/overlays/{name}'
         if os.path.exists(overlay):
-            print('copying overlay for project: ', name)
-            
             #shutil.copytree(overlay, dst, dirs_exist_ok=True)
             cp_deltree(overlay, dst, dirs_exist_ok=True)
 
@@ -292,7 +290,7 @@ def prepare_build(this_src_dir, fields, mt_project):
                 assert(os.path.exists(file)) # if there is a mod overlay, it must be a CMake project because this merely includes after
                 with open(file, 'a') as contents:
                     contents.write('\r\ninclude(mod)\r\n')
-            
+        
         # run script to process repo if it had just been checked out
         
         # here we have a bit of cache control so we dont have to re-checkout repos when we rerun the script to tune for success
