@@ -73,6 +73,19 @@ if not os.path.exists(f'{install_dir}/lib/Frameworks'):
 
 if not os.path.exists(prefix_sym): os.symlink(pf_repo, prefix_sym, True)
 
+def run_check(cmd, capture_output=False, text=False, stdout=None, stderr=None):
+    res = subprocess.run(cmd,
+        capture_output=capture_output, text=text,
+        stdout=stdout, stderr=stderr)
+
+    print('%s -> %s' % (os.getcwd(), ' '.join(cmd)))
+    if res.returncode != 0:
+        print(res.stdout)
+        print(f'errors:')
+        print( '------------------------------------------------')
+        if res.stderr: print(res.stderr)
+        exit(1)
+    return res
 
 def find_sdk(sdk):
     for item in every_sdk:
@@ -109,18 +122,12 @@ def parse(f):
     return f['name'], f['name'], f['version'], f.get('res'), f.get('sha256'), f.get('url'), f.get('commit'), f.get('branch'), f.get('libs'), f.get('includes'), f.get('bins')
 
 def git(fields, *args):
-    print(' --> current dir: ', os.getcwd())
     cmd = ['git' + exe] + list(args)
-    shell_cmd = ' '.join(cmd)
-    print('> ', shell_cmd)
-    return subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+    return run_check(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
 def cmake(fields, *args):
-    print(' --> current dir: ', os.getcwd())
     cmd = ['cmake' + exe] + list(args)
-    shell_cmd = ' '.join(cmd)
-    print('> ', shell_cmd)
-    return subprocess.run(cmd, capture_output=True, text=True)
+    return run_check(cmd, capture_output=True, text=True)
 
 def build(fields):
     return cmake(fields, '--build', '.', '--config', cfg)
@@ -146,11 +153,12 @@ def gen(fields, type, project_root, prefix_path, extra):
     if extra: args.extend(extra)
     ##
     cm = fields.get('cmake')
+    # look for generator scripts on specific os's (needed still? -- skia might be only use-case)
     if cm:
         gen_key = f'gen-{p}'
         if gen_key in cm:
             print('running gen script:', cm[gen_key])
-            return subprocess.run(cm[gen_key], capture_output=True, text=True)
+            return run_check(cm[gen_key], capture_output=True, text=True)
     
     return cmake(fields, *args)
 
@@ -246,6 +254,7 @@ def prepare_build(this_src_dir, fields, mt_project):
             ##
             digest = sha256_file(res_zip)
             if digest != sha256: print(f'sha256 checksum failure in project {name}: checksum for {res}: {digest}')
+            
             with zipfile.ZipFile(res_zip, 'r') as z: z.extractall(dst)
         elif url:
             os.chdir(extern_dir)
@@ -255,14 +264,13 @@ def prepare_build(this_src_dir, fields, mt_project):
                 if(fields.get('git')):
                     git(fields, *fields['git'])
             os.chdir(vname)
-            git(fields, 'fetch')
+            #if branch:
+            #    git(fields, 'fetch')
             diff_find = f'{this_src_dir}/diff/{name}.diff' # it might be of value to store diffs in prefix.
             diff      = None
             ##
             if os.path.exists(diff_find): diff = diff_find
             if diff: git(fields, 'reset', '--hard')
-            ##
-            
             if branch:
                 git(fields, 'checkout', '-b', branch)
             else:
@@ -294,7 +302,7 @@ def prepare_build(this_src_dir, fields, mt_project):
         first_cmd = fields.get('script')
         if first_cmd and not os.path.exists('.script.success'):
             print(f'[{vname}] running: {first_cmd}')
-            script = subprocess.run(first_cmd, capture_output=True, text=True)
+            script = run_check(first_cmd, capture_output=True, text=True)
             print(script.stdout)
             if script.returncode != 0:
                 print('error from script')
@@ -307,7 +315,7 @@ def prepare_build(this_src_dir, fields, mt_project):
 
         diff_file = f'{build_dir}/{name}.diff'
         with open(diff_file, 'w') as d:
-            subprocess.run(['git' + exe, 'diff'], stdout=d)
+            run_check(['git' + exe, 'diff'], stdout=d)
         print('diff-gen: ', diff_file)
     else:
         cached = True
@@ -429,13 +437,8 @@ def prepare_project(src_dir):
                 os.chdir(remote_build_path)
 
                 print(f'building {name}...')
-                build_res = build(fields)
-                if build_res.returncode != 0:
-                    print(build_res.stdout)
-                    print(f'build errors for extern: {name}')
-                    print( '------------------------------------------------')
-                    if build_res.stderr: print(build_res.stderr)
-                    exit(1)
+                build(fields)
+
                 os.chdir(prev_cwd)
                 
                 # something with libs is just a declaration with an environment variable usually, already installed in effect if there are libs
@@ -464,7 +467,6 @@ def prepare_project(src_dir):
 # if not, we arent generating our cmake correctly because it needs a compiler set along with other args
 # we run cmake -C sdk-generated-file-on-our-end.cmake
 
-
 # not sure if we should empty the dir
 def auto_extract(fileobj, path):
     if not os.path.exists(path):
@@ -490,6 +492,7 @@ sdk_data = find_sdk(sdk)
 sdk_args = sdk_data['args']
 sdk_args['CMAKE_FIND_ROOT_PATH'] = sdk_location
 sdk_src = sdk_args.get('source') # would be nice if we could know if its a repo or a tar file from the content type
+
 if sdk_src:
     if not os.path.exists(sdk_location):
         os.mkdir(sdk_location)
@@ -497,8 +500,14 @@ if sdk_src:
     if not sdk_cache:
         with open(sdk_cache, 'w') as sdk_f:
             rdata = requests.get(sdk_src)
-        auto_extract(rdata.content, sdk_location)
-            
+        sdk_src = sdk_location + '-src'
+        auto_extract(rdata.content, sdk_src)
+        os.chdir(sdk_src)
+        print(f'configuring sdk {sdk}')
+        run_check(['./configure', f'--target={sdk}', f'--prefix={sdk_location}'], capture_output=True, text=True)
+        print(f'building sdk {sdk}')
+        run_check(['make', '-j8'], capture_output=True, text=True)
+        
 with open(sdk_cmake, 'w') as f:
     f.write(f'# cmake file generated by prefix for sdk:{sdk}')
     for key, value in sdk_args.items():
