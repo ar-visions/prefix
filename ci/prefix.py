@@ -1,4 +1,3 @@
-
 import os
 import sys
 import requests
@@ -31,7 +30,7 @@ cfg            = os.environ.get('CMAKE_BUILD_TYPE') if p != 'win' else 'Release'
 js_import_path = os.environ.get('JSON_IMPORT_INDEX')
 sdk_cmake      = f'{build_dir}/sdk.cmake'
 io_res         = f'{build_dir}/io/res'
-cm_build       = 'build' + ('' if sdk == 'native' else f'-{sdk}') # probably call this build or build-sdk
+cm_build       = 'ion-build' + ('' if sdk == 'native' else f'-{sdk}') # probably call this build or build-sdk
 
 if 'CMAKE_SOURCE_DIR' in os.environ: del os.environ['CMAKE_SOURCE_DIR']
 if 'CMAKE_BINARY_DIR' in os.environ: del os.environ['CMAKE_BINARY_DIR']
@@ -73,7 +72,7 @@ if not os.path.exists(f'{install_dir}/lib/Frameworks'):
 
 if not os.path.exists(prefix_sym): os.symlink(pf_repo, prefix_sym, True)
 
-def run_check(cmd, capture_output=False, text=False, stdout=None, stderr=None):
+def run_check(cmd, capture_output=False, text=True, stdout=None, stderr=None):
     res = subprocess.run(cmd,
         capture_output=capture_output, text=text,
         stdout=stdout, stderr=stderr)
@@ -123,11 +122,11 @@ def parse(f):
 
 def git(fields, *args):
     cmd = ['git' + exe] + list(args)
-    return run_check(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+    return run_check(cmd).returncode == 0
 
 def cmake(fields, *args):
     cmd = ['cmake' + exe] + list(args)
-    return run_check(cmd, capture_output=True, text=True)
+    return run_check(cmd)
 
 def build(fields):
     return cmake(fields, '--build', '.', '--config', cfg)
@@ -158,7 +157,7 @@ def gen(fields, type, project_root, prefix_path, extra):
         gen_key = f'gen-{p}'
         if gen_key in cm:
             print('running gen script:', cm[gen_key])
-            return run_check(cm[gen_key], capture_output=True, text=True)
+            return run_check(cm[gen_key])
     
     return cmake(fields, *args)
 
@@ -264,22 +263,20 @@ def prepare_build(this_src_dir, fields, mt_project):
                 if(fields.get('git')):
                     git(fields, *fields['git'])
             os.chdir(vname)
-            #if branch:
-            #    git(fields, 'fetch')
+            if branch:
+                git(fields, 'fetch')
             diff_find = f'{this_src_dir}/diff/{name}.diff' # it might be of value to store diffs in prefix.
             diff      = None
             ##
             if os.path.exists(diff_find): diff = diff_find
             if diff: git(fields, 'reset', '--hard')
             if branch:
-                git(fields, 'checkout', '-b', branch)
-            else:
-                checkout = commit if commit else 'main'
-                git(fields, 'checkout', checkout)
+                cmd = ['git', 'rev-parse', branch]
+                commit = subprocess.check_output(cmd).decode('utf-8').strip()
             
-            ##
-            if diff: git(fields, 'apply', diff)
-            
+            git(fields, 'checkout', commit if commit else 'main')
+            if diff: git(fields, 'apply', '--reject', '--ignore-space-change', '--ignore-whitespace', '--whitespace=fix', diff)
+
         ## overlay files; not quite as good as diff but its easier to manipulate
         overlay = f'{this_src_dir}/overlays/{name}'
         if os.path.exists(overlay):
@@ -302,7 +299,7 @@ def prepare_build(this_src_dir, fields, mt_project):
         first_cmd = fields.get('script')
         if first_cmd and not os.path.exists('.script.success'):
             print(f'[{vname}] running: {first_cmd}')
-            script = run_check(first_cmd, capture_output=True, text=True)
+            script = run_check(first_cmd)
             print(script.stdout)
             if script.returncode != 0:
                 print('error from script')
@@ -425,14 +422,8 @@ def prepare_project(src_dir):
             
             ## only building the src git repos; the resources are system specific builds
             if not cached and is_git and not resource:
-                gen_res = gen(fields, cfg, project_root, prefix_path, cmake_args)
-                if gen_res.returncode != 0:
-                    print(gen_res.stdout)
-                    print(f'cmake generation errors for extern: {name}')
-                    print( '------------------------------------------------')
-                    if gen_res.stderr: print(gen_res.stderr)
-                    exit(1)
-                
+                gen(fields, cfg, project_root, prefix_path, cmake_args)
+
                 prev_cwd = os.getcwd()
                 os.chdir(remote_build_path)
 
@@ -443,13 +434,7 @@ def prepare_project(src_dir):
                 
                 # something with libs is just a declaration with an environment variable usually, already installed in effect if there are libs
                 if not libs:
-                    install_res = cm_install(fields)
-                    if install_res.returncode != 0:
-                        print(install_res.stdout)
-                        print(f'install errors for extern: {name}')
-                        print( '------------------------------------------------')
-                        if install_res.stderr: print(install_res.stderr)
-                        exit(1)
+                    cm_install(fields)
                     
                     if cmake_install_libs:
                         print(f'installing extra libs, because Python makes sense and CMake installs do not')
