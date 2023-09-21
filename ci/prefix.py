@@ -273,8 +273,10 @@ def prepare_build(this_src_dir, fields, mt_project):
             if branch:
                 cmd = ['git', 'rev-parse', branch]
                 commit = subprocess.check_output(cmd).decode('utf-8').strip()
+            if not commit:
+                commit = 'main'
             
-            git(fields, 'checkout', commit if commit else 'main')
+            git(fields, 'checkout', commit)
             if diff: git(fields, 'apply', '--reject', '--ignore-space-change', '--ignore-whitespace', '--whitespace=fix', diff)
 
         ## overlay files; not quite as good as diff but its easier to manipulate
@@ -288,7 +290,8 @@ def prepare_build(this_src_dir, fields, mt_project):
             # include some extra code without needing to copy the CMakeLists.txt
             if os.path.exists(f'{overlay}/mod'):
                 file = f'{dst}/CMakeLists.txt'
-                print('file = ', file)
+                # this should fail if there is no CMake
+                git(fields, 'checkout', commit, '--', 'CMakeLists.txt')
                 assert(os.path.exists(file)) # if there is a mod overlay, it must be a CMake project because this merely includes after
                 with open(file, 'a') as contents:
                     contents.write('\r\ninclude(mod)\r\n')
