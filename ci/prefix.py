@@ -148,11 +148,8 @@ def gen(fields, type, project_root, prefix_path, extra):
             '-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON', 
            f'-DCMAKE_BUILD_TYPE={build_type}'
     ]
-    ## if
     if extra: args.extend(extra)
-    ##
     cm = fields.get('cmake')
-    # look for generator scripts on specific os's (needed still? -- skia might be only use-case)
     if cm:
         gen_key = f'gen-{p}'
         if gen_key in cm:
