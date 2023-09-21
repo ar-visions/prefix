@@ -7,26 +7,6 @@ option(GEN_ONLY "dont run the build action after generating the build folder for
 get_filename_component(ci_dir     "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY)
 get_filename_component(parent_dir "${ci_dir}"                  DIRECTORY)
 #
-set(INSTALL_PREFIX  "${parent_dir}/install")
-set(CI_DIR          "${parent_dir}/ci")
-set(EXTERN_DIR      "${parent_dir}/extern")
-set(COMPILABLE_EXTS ".cpp .cc .c .cxx .ixx .mm")
-
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Debug")
-endif()
-
-if(WIN32)
-    add_link_options(/ignore:4098)
-    set (CMAKE_SYSTEM_VERSION 10.0.20348.0)
-    #include_directories(C:/msys64/mingw64/include)
-    #add_compile_options(/p:CharacterSet=Unicode)
-endif()
-
-if (DEFINED DefsGuard)
-    return()
-endif()
-set(DefsGuard yes)
 
 macro(set_default v val)
     if(NOT ${v})
@@ -64,7 +44,6 @@ macro(set_defs)
     set_default(LINK      "static")
     set_default(PREFIX    "/usr/local")
     set_default(SDK       "native")
-
     
     if(CMAKE_BUILD_TYPE MATCHES Debug)
         set(DEBUG TRUE)
@@ -98,8 +77,9 @@ macro(set_defs)
         set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
     endif()
 
+    # anything with an SDK specified will build linux IoT things
     if(NOT SDK STREQUAL "native")
-        set(OS ${SDK})
+        set(OS "linux")
     elseif(WIN32)
         set(OS "win")
     elseif(APPLE)
@@ -114,6 +94,25 @@ macro(set_defs)
     set(${SDK}    "1")
     set(${OS}     "1")
     set(cpp        23)
+
+    set(INSTALL_PREFIX  "${parent_dir}/install/${SDK}")
+    set(CI_DIR          "${parent_dir}/ci")
+    set(EXTERN_DIR      "${parent_dir}/extern")
+    set(COMPILABLE_EXTS ".cpp .cc .c .cxx .ixx .mm")
+
+    print("CMAKE_CURRENT_LIST_FILE is ${CMAKE_CURRENT_LIST_FILE}")
+
+    if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE "Debug")
+    endif()
+
+    if(WIN32)
+        add_link_options(/ignore:4098)
+        set (CMAKE_SYSTEM_VERSION 10.0.20348.0)
+        #include_directories(C:/msys64/mingw64/include)
+        #add_compile_options(/p:CharacterSet=Unicode)
+    endif()
+
 
     find_package(PkgConfig QUIET)
     set_property(GLOBAL PROPERTY RULE_MESSAGES OFF)

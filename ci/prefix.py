@@ -10,6 +10,9 @@ import hashlib
 import shutil
 import glob
 import zipfile
+import tarfile
+import magic
+
 from datetime import datetime
 from datetime import timedelta
 
@@ -26,7 +29,7 @@ build_dir      = os.environ.get('CMAKE_BINARY_DIR')
 sdk            = os.environ.get('SDK') if os.environ.get('SDK') else 'native'
 cfg            = os.environ.get('CMAKE_BUILD_TYPE') if p != 'win' else 'Release' # externals are Release-built on windows
 js_import_path = os.environ.get('JSON_IMPORT_INDEX')
-js_sdk_path    = os.environ.get('JSON_SDK_INDEX')
+sdk_cmake      = f'{build_dir}/sdk.cmake'
 io_res         = f'{build_dir}/io/res'
 cm_build       = 'build' + ('' if sdk == 'native' else f'-{sdk}') # probably call this build or build-sdk
 
@@ -39,7 +42,9 @@ if 'LIBRARY_PATH'     in os.environ: del os.environ['LIBRARY_PATH']
 
 pf_repo        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 install_dir    = f'install/{sdk}'
+sdk_rel        = f'sdk/{sdk}' if sdk != 'native' else ''
 install_prefix = f'{pf_repo}/{install_dir}'
+sdk_location   = f'{pf_repo}/{sdk_rel}' if sdk_rel else ''
 extern_dir     = f'{pf_repo}/extern' # we put different build dirs for the different sdks in here.  it would be ludacrous to checkout more?...
 mingw_cmake    = f'{pf_repo}/ci/mingw-cmake.sh' # oh boy we need to properly use mingw on windows, as its just not going to work supporting native land only.  it means the skia overlay we can bring back
 gen_only       = os.environ.get('GEN_ONLY')
@@ -50,7 +55,8 @@ common         = ['.cc',  '.c',   '.cpp', '.cxx', '.h',  '.hpp',
 
 every_import = ['prefix'] # prefix with prefix.
 every_sdk    = [{'name':'native', 'args':{}}]
-prefix_sym = f'{extern_dir}/prefix'
+sdk_data     = None
+prefix_sym   = f'{extern_dir}/prefix'
 
 os.environ['INSTALL_PREFIX'] = install_prefix
 os.environ['PKG_CONFIG_PATH'] = install_prefix + '/lib/pkgconfig'
@@ -68,7 +74,13 @@ if not os.path.exists(f'{install_dir}/lib/Frameworks'):
 if not os.path.exists(prefix_sym): os.symlink(pf_repo, prefix_sym, True)
 
 
-
+def find_sdk(sdk):
+    for item in every_sdk:
+        if item.get('name') == sdk:
+            return item
+    print(f'sdk not found: {sdk}')
+    exit(1)
+    return None
 
 # Function to replace %NAME% with corresponding environment variable
 def replace_env_variables(match):
@@ -116,6 +128,7 @@ def build(fields):
 def gen(fields, type, project_root, prefix_path, extra):
     build_type = type[0].upper() + type[1:].lower() 
     args = ['-S', project_root,
+            '-C', sdk_cmake,
             '-B', cm_build, 
            f'-DCI=\'{pf_repo}/ci\'',
            #f'-DCMAKE_SYSTEM_PREFIX_PATH=\'{src_dir}/../ion/ci;{install_prefix}/lib/cmake\'',
@@ -305,9 +318,10 @@ def prepare_build(this_src_dir, fields, mt_project):
 def prepare_sdk(src_dir):
     project_file = src_dir + '/project.json'
     with open(project_file, 'r') as project_contents:
+        print('file: ' + project_file)
         project_json = json.load(project_contents)
-        import_list  = project_json['import']
-        sdk_list     = project_json['sdk']
+        import_list  = project_json.get('import')
+        sdk_list     = project_json.get('sdk') 
         if sdk_list:
             for item in sdk_list:
                 every_sdk.append(item)
@@ -448,8 +462,47 @@ def prepare_project(src_dir):
 
 # sdk are defined by any project used, so we accumulate those first
 # if not, we arent generating our cmake correctly because it needs a compiler set along with other args
-# we run cmake -C toolchain-generated-file-on-our-end.cmake
+# we run cmake -C sdk-generated-file-on-our-end.cmake
+
+
+# not sure if we should empty the dir
+def auto_extract(fileobj, path):
+    if not os.path.exists(path):
+        os.mkdir(path)
+    mime = magic.Magic(mime=True)
+    mime_type = mime.from_buffer(fileobj.read(1024), mime=True)
+    f = None
+    if mime_type == 'application/x-xz':
+        f = tarfile.open(fileobj=fileobj, mode='r:xz')
+    if mime_type == 'application/x-gzip':
+        f = tarfile.open(fileobj=fileobj, mode='r:gz')
+    elif mime_type == 'application/x-tar':
+        f = tarfile.open(fileobj=fileobj, mode='r')
+    elif mime_type == 'application/zip':
+        f = zipfile.ZipFile(fileobj=fileobj, mode='r')
+    else:
+        raise Exception('auto_extract [magic] cannot determine mime type for fileobj')
+    f.extractall(path)
+
+# generate cmake file with args for sdk
 prepare_sdk(src_dir)
+sdk_data = find_sdk(sdk)
+sdk_args = sdk_data['args']
+sdk_args['CMAKE_FIND_ROOT_PATH'] = sdk_location
+sdk_src = sdk_args.get('source') # would be nice if we could know if its a repo or a tar file from the content type
+if sdk_src:
+    if not os.path.exists(sdk_location):
+        os.mkdir(sdk_location)
+    sdk_cache = f'{sdk_location}-cache' # file we store as cache
+    if not sdk_cache:
+        with open(sdk_cache, 'w') as sdk_f:
+            rdata = requests.get(sdk_src)
+        auto_extract(rdata.content, sdk_location)
+            
+with open(sdk_cmake, 'w') as f:
+    f.write(f'# cmake file generated by prefix for sdk:{sdk}')
+    for key, value in sdk_args.items():
+        f.write(f'set({key} {value})')
 
 # prepare project recursively
 prepare_project(src_dir)
