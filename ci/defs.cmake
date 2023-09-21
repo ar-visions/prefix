@@ -100,8 +100,6 @@ macro(set_defs)
     set(EXTERN_DIR      "${parent_dir}/extern")
     set(COMPILABLE_EXTS ".cpp .cc .c .cxx .ixx .mm")
 
-    print("CMAKE_CURRENT_LIST_FILE is ${CMAKE_CURRENT_LIST_FILE}")
-
     if(NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE "Debug")
     endif()

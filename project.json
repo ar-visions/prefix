@@ -4,10 +4,6 @@
     "import": [],
     "sdk": [
         {
-            "name": "native",
-            "args": {}
-        },
-        {
             "name":   "aarch64-linux-gnu",
             "source": "https://developer.arm.com/-/media/Files/downloads/gnu/12.3.rel1/srcrel/arm-gnu-toolchain-src-snapshot-12.3.rel1.tar.xz?rev=4f7cb4891a3d47449b0c1d40a33962ee&hash=9324E40DFFBDDD7C85180C11C08808DE",
             "args": {
