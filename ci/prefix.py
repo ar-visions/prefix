@@ -11,6 +11,7 @@ import glob
 import zipfile
 import tarfile
 import magic
+import multiprocessing
 
 from datetime import datetime
 from datetime import timedelta
@@ -129,7 +130,7 @@ def cmake(fields, *args):
     return run_check(cmd)
 
 def build(fields):
-    return cmake(fields, '--build', '.', '--config', cfg)
+    return cmake(fields, '--build', '.', '--parallel', str(multiprocessing.cpu_count()), '--config', cfg)
 
 def gen(fields, type, project_root, prefix_path, extra):
     build_type = type[0].upper() + type[1:].lower() 
@@ -299,15 +300,6 @@ def prepare_build(this_src_dir, fields, mt_project):
         if first_cmd and not os.path.exists('.script.success'):
             print(f'[{vname}] running: {first_cmd}')
             script = run_check(first_cmd)
-            print(script.stdout)
-            if script.returncode != 0:
-                print('error from script')
-                exit(1)
-            else:
-                file = f'.script.success'
-                with open(file, 'w') as contents:
-                    contents.write(script.stdout)
-            
 
         diff_file = f'{build_dir}/{name}.diff'
         with open(diff_file, 'w') as d:
