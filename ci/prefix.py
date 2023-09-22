@@ -146,7 +146,8 @@ def gen(fields, type, project_root, prefix_path, extra):
            f'-DCMAKE_INSTALL_BINDIR=\'{install_prefix}/bin\'', 
            f'-DCMAKE_PREFIX_PATH=\'{prefix_path}\'', 
             '-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON', 
-           f'-DCMAKE_BUILD_TYPE={build_type}'
+           f'-DCMAKE_BUILD_TYPE={build_type}',
+           f'-DSDK=\'{sdk}\''
     ]
     if extra: args.extend(extra)
     cm = fields.get('cmake')
