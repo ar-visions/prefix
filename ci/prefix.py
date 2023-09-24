@@ -225,6 +225,9 @@ def cp_deltree(src, dst, dirs_exist_ok=True):
                 if os.path.exists(src_rm): # subsequent calls error.  the repo would need deleted files restored but no other changes reverted.  better to just check
                     os.remove(src_rm)
 
+def if_exists(res):
+    return res if os.path.exists(res) else None
+
 ## prepare an { object } of external repo
 def prepare_build(this_src_dir, fields, mt_project):
     vname, name, version, res, sha256, url, commit, branch, libs, includes, bins = parse(fields)
@@ -262,20 +265,15 @@ def prepare_build(this_src_dir, fields, mt_project):
                 if(fields.get('git')):
                     git(fields, *fields['git'])
             os.chdir(vname)
-            if branch:
-                git(fields, 'fetch')
-            diff_find = f'{this_src_dir}/diff/{name}.diff' # it might be of value to store diffs in prefix.
-            diff      = None
-            ##
-            if os.path.exists(diff_find): diff = diff_find
-            if diff: git(fields, 'reset', '--hard')
+            git(fields, 'fetch')
+            git(fields, 'reset', '--hard') # should let us unpatch
             if branch:
                 cmd = ['git', 'rev-parse', branch]
                 commit = subprocess.check_output(cmd).decode('utf-8').strip()
             if not commit:
                 commit = 'main'
-            ##
             git(fields, 'checkout', commit)
+            diff = if_exists(f'{this_src_dir}/diff/{name}.diff') # it might be of value to store diffs in prefix.
             if diff: git(fields, 'apply', '--reject', '--ignore-space-change', '--ignore-whitespace', '--whitespace=fix', diff)
 
         ## overlay files; not quite as good as diff but its easier to manipulate
