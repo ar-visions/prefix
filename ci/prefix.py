@@ -276,17 +276,20 @@ def prepare_build(this_src_dir, fields, mt_project):
                 git(fields, True, 'clone', '--recursive', url, vname)
                 if(fields.get('git')):
                     git(fields, True, *fields['git'])
-            os.chdir(vname)
-            git(fields, True, 'fetch')
-            git(fields, True, 'reset', '--hard') # should let us unpatch 
+                
             if branch:
                 cmd = ['git', 'rev-parse', branch]
                 commit = subprocess.check_output(cmd).decode('utf-8').strip()
             if not commit:
                 commit = 'main'
-            git(fields, True, 'checkout', commit)
+            if first_checkout:
+                git(fields, True, 'checkout', commit)
+
+            os.chdir(vname)
+            #git(fields, True, 'fetch')
+            #git(fields, True, 'reset', '--hard') # should let us unpatch 
             diff = if_exists(f'{this_src_dir}/diff/{name}.diff') # it might be of value to store diffs in prefix.
-            if diff:
+            if diff and first_checkout:
                 git(fields, False, 'apply',  '--reject', 
                     '--ignore-space-change', '--ignore-whitespace',
                     '--whitespace=fix', diff)
@@ -393,8 +396,8 @@ def prepare_project(src_dir):
                     cmake_args = cmargs
                     for i in range(len(cmake_args)):
                         v = cmake_args[i]
-                        tmpl = '%PREFIX%'
                         v = v.replace('%PREFIX%', install_prefix)
+                        v = v.replace('%EXTERN%', extern_dir)
                         if (cmake_args[i] != v):
                             print('setting arg: ', v)
                             cmake_args[i]  = v
