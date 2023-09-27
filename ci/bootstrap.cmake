@@ -87,6 +87,8 @@ function(main)
 
     ## extend cmake to do a bit more importing and building if it has not been done yet
     ## do it in the configuration made by the user and in the output directory of the user
+    set(ENV{CMAKE_C_COMPILER}   ${CMAKE_C_COMPILER})
+    set(ENV{CMAKE_CXX_COMPILER}   ${CMAKE_CXX_COMPILER})
     set(ENV{CMAKE_SOURCE_DIR}   ${CMAKE_SOURCE_DIR})
     set(ENV{CMAKE_BINARY_DIR}   ${CMAKE_BINARY_DIR})
     set(ENV{CMAKE_BUILD_TYPE}   ${CMAKE_BUILD_TYPE})

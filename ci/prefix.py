@@ -26,6 +26,8 @@ def sys_type():
 p              = sys_type()
 src_dir        = os.environ.get('CMAKE_SOURCE_DIR')
 build_dir      = os.environ.get('CMAKE_BINARY_DIR')
+c_compiler     = os.environ.get('CMAKE_C_COMPILER')
+cxx_compiler   = os.environ.get('CMAKE_CXX_COMPILER')
 sdk            = os.environ.get('SDK') if os.environ.get('SDK') else 'native'
 cfg            = os.environ.get('CMAKE_BUILD_TYPE') if p != 'win' else 'Release' # externals are Release-built on windows
 js_import_path = os.environ.get('JSON_IMPORT_INDEX')
@@ -36,6 +38,8 @@ cm_build       = 'ion-build' + ('' if sdk == 'native' else f'-{sdk}') # probably
 if 'CMAKE_SOURCE_DIR' in os.environ: del os.environ['CMAKE_SOURCE_DIR']
 if 'CMAKE_BINARY_DIR' in os.environ: del os.environ['CMAKE_BINARY_DIR']
 if 'CMAKE_BUILD_TYPE' in os.environ: del os.environ['CMAKE_BUILD_TYPE']
+if 'CMAKE_C_COMPILER' in os.environ: del os.environ['CMAKE_C_COMPILER']
+if 'CMAKE_CXX_COMPILER' in os.environ: del os.environ['CMAKE_CXX_COMPILER']
 #if 'SDKROOT'          in os.environ: del os.environ['SDKROOT']
 if 'CPATH'            in os.environ: del os.environ['CPATH']
 if 'LIBRARY_PATH'     in os.environ: del os.environ['LIBRARY_PATH']
@@ -73,13 +77,13 @@ if not os.path.exists(f'{install_dir}/lib/Frameworks'):
 
 if not os.path.exists(prefix_sym): os.symlink(pf_repo, prefix_sym, True)
 
-def run_check(cmd, capture_output=False, text=True, stdout=None, stderr=None):
+def run_check(cmd, error_if_fail=True, capture_output=False, text=True, stdout=None, stderr=None):
     res = subprocess.run(cmd,
         capture_output=capture_output, text=text,
         stdout=stdout, stderr=stderr)
 
     print('%s -> %s' % (os.getcwd(), ' '.join(cmd)))
-    if res.returncode != 0:
+    if res.returncode != 0 and error_if_fail:
         print(res.stdout)
         print(f'errors:')
         print( '------------------------------------------------')
@@ -121,16 +125,22 @@ def check(a):
 def parse(f):
     return f['name'], f['name'], f['version'], f.get('res'), f.get('sha256'), f.get('url'), f.get('commit'), f.get('branch'), f.get('libs'), f.get('includes'), f.get('bins')
 
-def git(fields, *args):
+def git(fields, error_if_fail, *args):
     cmd = ['git' + exe] + list(args)
-    return run_check(cmd).returncode == 0
+    return run_check(cmd, error_if_fail=error_if_fail).returncode == 0
 
 def cmake(fields, *args):
     cmd = ['cmake' + exe] + list(args)
     return run_check(cmd)
 
+# 
 def build(fields):
-    return cmake(fields, '--build', '.', '--parallel', str(multiprocessing.cpu_count()), '--config', cfg)
+    args = ['--build', '.', '--parallel', str(multiprocessing.cpu_count()), '--config', cfg]
+    cm = fields.get('cmake')
+    if cm and cm.get('target'):
+        target = cm.get('target')
+        args = args + ['--target', target]
+    return cmake(fields, *args)
 
 def gen(fields, type, project_root, prefix_path, extra):
     build_type = type[0].upper() + type[1:].lower() 
@@ -145,6 +155,8 @@ def gen(fields, type, project_root, prefix_path, extra):
            f'-DCMAKE_INSTALL_INCLUDEDIR=\'{install_prefix}/include\'', 
            f'-DCMAKE_INSTALL_LIBDIR=\'{install_prefix}/lib\'', 
            f'-DCMAKE_INSTALL_BINDIR=\'{install_prefix}/bin\'', 
+           f'-DCMAKE_C_COMPILER=\'{c_compiler}\'',
+           f'-DCMAKE_CXX_COMPILER=\'{cxx_compiler}\'',
            f'-DCMAKE_PREFIX_PATH=\'{prefix_path}\'', 
             '-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON', 
            f'-DCMAKE_BUILD_TYPE={build_type}',
@@ -261,20 +273,23 @@ def prepare_build(this_src_dir, fields, mt_project):
             os.chdir(extern_dir)
             if not os.path.exists(vname):
                 first_checkout = True
-                git(fields, 'clone', '--recursive', url, vname)
+                git(fields, True, 'clone', '--recursive', url, vname)
                 if(fields.get('git')):
-                    git(fields, *fields['git'])
+                    git(fields, True, *fields['git'])
             os.chdir(vname)
-            git(fields, 'fetch')
-            git(fields, 'reset', '--hard') # should let us unpatch
+            git(fields, True, 'fetch')
+            git(fields, True, 'reset', '--hard') # should let us unpatch 
             if branch:
                 cmd = ['git', 'rev-parse', branch]
                 commit = subprocess.check_output(cmd).decode('utf-8').strip()
             if not commit:
                 commit = 'main'
-            git(fields, 'checkout', commit)
+            git(fields, True, 'checkout', commit)
             diff = if_exists(f'{this_src_dir}/diff/{name}.diff') # it might be of value to store diffs in prefix.
-            if diff: git(fields, 'apply', '--reject', '--ignore-space-change', '--ignore-whitespace', '--whitespace=fix', diff)
+            if diff:
+                git(fields, False, 'apply',  '--reject', 
+                    '--ignore-space-change', '--ignore-whitespace',
+                    '--whitespace=fix', diff)
 
         ## overlay files; not quite as good as diff but its easier to manipulate
         overlay = f'{this_src_dir}/overlays/{name}'
@@ -286,7 +301,7 @@ def prepare_build(this_src_dir, fields, mt_project):
             if os.path.exists(f'{overlay}/mod'):
                 file = f'{dst}/CMakeLists.txt'
                 # this should fail if there is no CMake
-                git(fields, 'checkout', commit, '--', 'CMakeLists.txt')
+                git(fields, True, 'checkout', commit, '--', 'CMakeLists.txt')
                 assert(os.path.exists(file)) # if there is a mod overlay, it must be a CMake project because this merely includes after
                 with open(file, 'a') as contents:
                     contents.write('\r\ninclude(mod)\r\n')
