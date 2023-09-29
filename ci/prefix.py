@@ -274,9 +274,12 @@ def prepare_build(this_src_dir, fields, mt_project):
             if not os.path.exists(vname):
                 first_checkout = True
                 git(fields, True, 'clone', '--recursive', url, vname)
+                os.chdir(vname)
                 if(fields.get('git')):
                     git(fields, True, *fields['git'])
-                
+            else:
+                os.chdir(vname)
+            
             if branch:
                 cmd = ['git', 'rev-parse', branch]
                 commit = subprocess.check_output(cmd).decode('utf-8').strip()
@@ -285,7 +288,6 @@ def prepare_build(this_src_dir, fields, mt_project):
             if first_checkout:
                 git(fields, True, 'checkout', commit)
 
-            os.chdir(vname)
             #git(fields, True, 'fetch')
             #git(fields, True, 'reset', '--hard') # should let us unpatch 
             diff = if_exists(f'{this_src_dir}/diff/{name}.diff') # it might be of value to store diffs in prefix.
@@ -304,13 +306,16 @@ def prepare_build(this_src_dir, fields, mt_project):
             if os.path.exists(f'{overlay}/mod'):
                 file = f'{dst}/CMakeLists.txt'
                 # this should fail if there is no CMake
-                git(fields, True, 'checkout', commit, '--', 'CMakeLists.txt')
+                overlay_cm = f'{this_src_dir}/overlays/{name}/CMakeLists.txt'
+                if not os.path.exists(overlay_cm):
+                    print(f'checking out CMakeLists for {name}')
+                    git(fields, True, 'checkout', commit, '--', 'CMakeLists.txt')
                 assert(os.path.exists(file)) # if there is a mod overlay, it must be a CMake project because this merely includes after
+                print(f'adding include(mod) to project {name}')
                 with open(file, 'a') as contents:
                     contents.write('\r\ninclude(mod)\r\n')
         
         # run script to process repo if it had just been checked out
-        
         # here we have a bit of cache control so we dont have to re-checkout repos when we rerun the script to tune for success
         first_cmd = fields.get('script')
         if first_cmd and not os.path.exists('.script.success'):
