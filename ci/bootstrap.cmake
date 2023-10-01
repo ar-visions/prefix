@@ -101,7 +101,7 @@ function(main)
 
     # now that we have prepared python.. we can run prefix.py (clone build & install externs)
     execute_process(
-        COMMAND ${PYTHON} "${CI_DIR}/prefix.py" RESULT_VARIABLE import_result)
+        COMMAND ${PYTHON} "${prefix_dir}/ci/prefix.py" RESULT_VARIABLE import_result)
 
     # its written to and valid if this import_result equals 0, no need to delete
     if (NOT (import_result EQUAL "0"))
@@ -151,7 +151,6 @@ function(main)
                 else()
                     set(loc ${import.${n_entry}.extern}/${include})
                     get_filename_component(resolve ${loc} REALPATH)
-                    print("${loc} -> ${resolve}")
                     list(APPEND import.${n_entry}.includes ${resolve})
                 endif()
                 math(EXPR ii "${ii} + 1")
@@ -179,8 +178,6 @@ function(main)
                             set(extra "/Debug")
                         endif()
                     endif()
-                    #print("first = ${import.${n_entry}.extern}/")
-                    #print("second = ${lib}${extra}")
                     list(APPEND import.${n_entry}.libs ${import.${n_entry}.extern}/${lib}${extra}) # probably better to translate in the prepare.py (bin is doing this)
                 endif()
 

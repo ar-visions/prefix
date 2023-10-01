@@ -5,8 +5,7 @@ option(GEN_ONLY "dont run the build action after generating the build folder for
 
 # get path of install / extern
 get_filename_component(ci_dir     "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY)
-get_filename_component(parent_dir "${ci_dir}"                  DIRECTORY)
-#
+get_filename_component(prefix_dir "${ci_dir}"                  DIRECTORY)
 
 macro(set_default v val)
     if(NOT ${v})
@@ -40,7 +39,6 @@ macro(set_defs)
     endif()
 
     set_default(ARCH      ${CMAKE_HOST_SYSTEM_PROCESSOR}) # "x64")
-    set_default(EXTERN    "link")
     set_default(LINK      "static")
     set_default(PREFIX    "/usr/local")
     set_default(SDK       "native")
@@ -49,32 +47,6 @@ macro(set_defs)
         set(DEBUG TRUE)
     else()
         set(DEBUG FALSE)
-    endif()
-    
-    if(NOT SDK STREQUAL "native")
-        if(NOT DEFINED ENV{STAGING_DIR})
-            message(FATAL_ERROR "STAGING_DIR not set")
-        endif()
-        set(CMAKE_STAGING_PREFIX    $ENV{STAGING_DIR})
-        set(PREFIX                  $ENV{STAGING_DIR})
-        set(CMAKE_SYSROOT           ${PREFIX})
-        set(CMAKE_SYSTEM_NAME       Linux)
-        set(CMAKE_SYSTEM_PROCESSOR  ${ARCH})
-        set(COMPILER_SUFFIX         "gnu")
-        if(ARCH STREQUAL "arm")
-            set(COMPILER_SUFFIX "gnuebi")
-        endif()
-        set(location                ${PREFIX}/bin/${ARCH}-${SDK}-linux-${COMPILER_SUFFIX})
-        set(CMAKE_C_COMPILER        ${location}-gcc)
-        set(CMAKE_CXX_COMPILER      ${location}-g++)
-        set(CMAKE_RAN_LIB           ${location}-ranlib)
-        set(CMAKE_RAN_NM            ${location}-nm)
-        set(CMAKE_RAN_AR            ${location}-ar)
-        set(CMAKE_RAN_STRIP         ${location}-strip)
-        set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-        set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-        set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-        set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
     endif()
 
     # anything with an SDK specified will build linux IoT things
@@ -95,9 +67,12 @@ macro(set_defs)
     set(${OS}     "1")
     set(cpp        23)
 
-    set(INSTALL_PREFIX  "${parent_dir}/install/${SDK}")
-    set(CI_DIR          "${parent_dir}/ci")
-    set(EXTERN_DIR      "${parent_dir}/extern")
+    # useful directories
+    set(INSTALL_PREFIX  "${prefix_dir}/install/${SDK}")
+    set(CI_DIR          "${prefix_dir}/ci")
+    set(EXTERN_DIR      "${prefix_dir}/extern")
+
+    # determine if modules are compilable by looking for these exts
     set(COMPILABLE_EXTS ".cpp .cc .c .cxx .ixx .mm")
 
     if(NOT CMAKE_BUILD_TYPE)
@@ -114,7 +89,7 @@ macro(set_defs)
 
     find_package(PkgConfig QUIET)
     set_property(GLOBAL PROPERTY RULE_MESSAGES OFF)
-    add_definitions(-DEXTERN=link -DLINK=static -DARCH=x64 -DSDK=native)
+    add_definitions(-DLINK=static -DARCH=x64 -DSDK=native)
 
     if(APPLE)
         set(m_pre                       "lib")
