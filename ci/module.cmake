@@ -442,6 +442,8 @@ macro(process_dep d t_name)
                     load_module(${r_path} ${project_name} ${module} ${pkg_path})
                 endif()
                 # should be valid target now..
+            else()
+                target_include_directories(${t_name} PUBLIC ${extern_path})
             endif()
             
             get_target_property(t_type ${mod_target} TYPE)
