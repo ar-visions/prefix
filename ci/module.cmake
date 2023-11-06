@@ -639,18 +639,14 @@ macro(create_module_targets)
         # this is useful for shaders, textures and models that can update at runtime
         # ------------------------
         if(EXISTS ${p}/res)
-            #add_custom_command(
-            #    TARGET ${t_name} POST_BUILD
-            #    COMMAND ${CMAKE_COMMAND} -E copy_directory
-            #    ${p}/res ${CMAKE_BINARY_DIR})
-
-            foreach(f IN LISTS DIRECTORY ${p}/res)
+            file(GLOB res_contents "${p}/res/*")
+            foreach(full IN LISTS res_contents)
+                get_filename_component(f ${full} NAME)
                 set(dst ${CMAKE_BINARY_DIR}/${f})
-                if(IS_DIRECTORY ${f} AND NOT IS_SYMLINK ${dst})
+                if(IS_DIRECTORY ${full} AND NOT IS_SYMLINK ${dst})
                     add_custom_command(
                         TARGET ${t_name} POST_BUILD
-                        COMMAND ${CMAKE_COMMAND} -E copy_directory
-                        ${f} ${dst})
+                        COMMAND ${CMAKE_COMMAND} -E copy_directory ${full} ${dst})
                 endif()
             endforeach()
         endif()
