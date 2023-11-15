@@ -139,17 +139,15 @@ macro(set_defs)
 
     if(NOT MSVC)
         #set(CMAKE_CXX_FLAGS -fmodules)
-        #add_compile_options(-fmodules --precompile) -- this is just a non starter because it has to be different for differnet sources
+        #add_compile_options(-fmodules --precompile)
         if(x64 AND native)
-            add_compile_options(-mavx2)
+            add_compile_options(-mavx)
         endif()
         #add_compile_options(
         #    -Wall -Wfatal-errors  -Wno-strict-aliasing
         #    -fpic -funwind-tables -fvisibility=hidden -pipe)
     else()
-        # base CXX flags for msvc (using 2022 with experimental build tools)
-        # /module:stdIfcDir \"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.33.31629\\ifc\\x64\\\"
-        #set(CMAKE_CXX_FLAGS /experimental:module /sdl- /EHsc /MD) # /p:CharacterSet=Unicode 
+        add_compile_options(/arch:AVX)
     endif()
 endmacro()
 
