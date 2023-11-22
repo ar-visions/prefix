@@ -236,6 +236,10 @@ macro(cflags)
     listy(cflags "" ${ARGN})
 endmacro()
 
+macro(cxxflags)
+    listy(cxxflags "" ${ARGN})
+endmacro()
+
 macro(lflags)
     listy(lflags "" ${ARGN})
 endmacro()
