@@ -111,15 +111,15 @@ macro(var_prepare r_path)
         list(REMOVE_ITEM _src "${p}/${mod}.cpp")
         ##
         if(EXISTS "${p}/${mod}.cpp")
-            list(INSERT _src 0 "${p}/${mod}.cpp")
+            list(INSERT _src 0 "${p}/${mod}.cpp") # base library cpp is added if its there
         endif()
         ##
         if(EXISTS "${p}/${mod}.mm")
-            list(INSERT _src 0 "${p}/${mod}.mm")
+            list(INSERT _src 0 "${p}/${mod}.mm") # also objective-c if its there
         endif()
         ##
         if(EXISTS "${p}/${mod}.ixx")
-            list(INSERT _src 0 "${p}/${mod}.ixx")
+            list(INSERT _src 0 "${p}/${mod}.ixx") # cpp23 module
         endif()
     else()
         file(GLOB _src "${p}/*.ixx" "${p}/*.c*" "${p}/*.mm")
@@ -169,6 +169,7 @@ macro(var_prepare r_path)
         get_filename_component(name ${s} NAME)
         list(APPEND tests ${name})
     endforeach()
+
     set(tests_headers "")
     foreach(s ${_tests_headers})
         get_filename_component(name ${s} NAME)
@@ -235,7 +236,7 @@ macro(var_finish)
         endif()
     endforeach()
 
-    # resolve this full_src list
+    # resolve this full_src list [not working atm; its still compiling symlinked stuff which vscode has trouble w]
     resolve_symlinks(full_src full_src)
     set(full_includes "")
 
