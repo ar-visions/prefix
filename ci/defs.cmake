@@ -75,9 +75,9 @@ macro(set_defs)
     # determine if modules are compilable by looking for these exts
     set(COMPILABLE_EXTS ".cpp .cc .c .cxx .ixx .mm")
 
-    if(NOT CMAKE_BUILD_TYPE)
-        set(CMAKE_BUILD_TYPE "Debug")
-    endif()
+    #if(NOT CMAKE_BUILD_TYPE)
+    #    set(CMAKE_BUILD_TYPE "Debug")
+    #endif()
 
     if(WIN32)
         add_link_options(/ignore:4098)
