@@ -87,8 +87,8 @@ macro(set_defs)
 
     if(WIN32)
         add_link_options(/ignore:4098)
-        set (CMAKE_SYSTEM_VERSION 10.0.20348.0)
-        #include_directories(C:/msys64/mingw64/include)
+        set(CMAKE_SYSTEM_VERSION 10.0.22000.0)
+        set(CMAKE_LIBRARY_PATH "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22000.0/um/x64")
         #add_compile_options(/p:CharacterSet=Unicode)
     endif()
 
