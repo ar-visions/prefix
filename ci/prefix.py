@@ -30,10 +30,11 @@ c_compiler     = os.environ.get('CMAKE_C_COMPILER')
 cxx_compiler   = os.environ.get('CMAKE_CXX_COMPILER')
 sdk            = os.environ.get('SDK') if os.environ.get('SDK') else 'native'
 cfg            = os.environ.get('CMAKE_BUILD_TYPE') # if p != 'win' else 'Release' # externals are Release-built on windows
+cfg_lower      = cfg.lower() # todo: set build folder to ion-$cfg_lower ie ion-debug or ion-release # native-debug or native
 js_import_path = os.environ.get('JSON_IMPORT_INDEX')
 sdk_cmake      = f'{build_dir}/sdk.cmake'
 io_res         = f'{build_dir}/io/res'
-cm_build       = 'ion-build' + ('' if sdk == 'native' else f'-{sdk}') # probably call this build or build-sdk
+cm_build       = f'ion-{cfg_lower}' + ('' if sdk == 'native' else f'-{sdk}') # probably call this build or build-sdk
 
 if 'CMAKE_SOURCE_DIR' in os.environ: del os.environ['CMAKE_SOURCE_DIR']
 if 'CMAKE_BINARY_DIR' in os.environ: del os.environ['CMAKE_BINARY_DIR']
@@ -45,7 +46,7 @@ if 'CPATH'            in os.environ: del os.environ['CPATH']
 if 'LIBRARY_PATH'     in os.environ: del os.environ['LIBRARY_PATH']
 
 pf_repo        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-install_dir    = f'install/{sdk}'
+install_dir    = f'install/{sdk}-{cfg_lower}'
 sdk_rel        = f'sdk/{sdk}' if sdk != 'native' else ''
 install_prefix = f'{pf_repo}/{install_dir}'
 sdk_location   = f'{pf_repo}/{sdk_rel}' if sdk_rel else ''

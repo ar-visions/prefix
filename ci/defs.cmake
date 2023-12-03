@@ -67,8 +67,14 @@ macro(set_defs)
     set(${OS}     "1")
     set(cpp        23)
 
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(cfg_lower "debug")
+    else()
+        set(cfg_lower "release")
+    endif()
+
     # useful directories
-    set(INSTALL_PREFIX  "${prefix_dir}/install/${SDK}")
+    set(INSTALL_PREFIX  "${prefix_dir}/install/${SDK}-${cfg_lower}")
     set(CI_DIR          "${prefix_dir}/ci")
     set(EXTERN_DIR      "${prefix_dir}/extern")
 
