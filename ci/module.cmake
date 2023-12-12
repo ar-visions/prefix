@@ -723,6 +723,7 @@ macro(create_module_targets)
 
         foreach(app ${apps})
             set(app_path "${p}/apps/${app}")
+
             string(REGEX REPLACE "\\.[^.]*$" "" t_app ${app})
             list(APPEND app_list ${t_app})
             
@@ -732,12 +733,26 @@ macro(create_module_targets)
             else()
                 add_executable(${t_app} ${app_path} ${${t_app}_src}) # must be a setting per app, so store in map or something win32(+app)
             endif()
+
+            # Check if the input string ends with ".cpp"
+            string(REGEX MATCH ".*\\.c$" is_c "${app_path}")
             
-            address_sanitizer(${t_app})
-            target_precompile_headers(${t_app} PRIVATE ${p}/${mod}.hpp)
+            if (is_c)
+                message(STATUS "The input string has a .cpp extension.")
+            else()
+                address_sanitizer(${t_app}) # seems to error with c99 executable on ubuntu
+                target_precompile_headers(${t_app} PRIVATE ${p}/${mod}.hpp)
+            endif()
+
             target_include_directories(${t_app} PRIVATE ${p}/apps)
             module_includes(${t_app} ${r_path} ${mod})
-            set_compilation(${t_app} ${mod})
+            
+            if (NOT is_c)
+                # todo: cflags should be used for .c and cxxflags for cxx/cpp/cc
+                # issue arises when you want to use both, or not.  well defined rules would be favored here
+                set_compilation(${t_app} ${mod} ${is_c})
+            endif()
+
             string(TOUPPER ${t_app} u)
             string(REPLACE "-" "_" u ${u})
 
