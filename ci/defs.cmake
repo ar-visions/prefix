@@ -26,6 +26,11 @@ macro(exit c)
 endmacro()
 
 macro(set_defs)
+    if(NOT CMAKE_BUILD_TYPE)
+        print("setting Debug build (default)")
+        set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "type of build" FORCE)
+    endif()
+
     set(CMAKE_SUPPRESS_REGENERATION false)
 
     if(MSVC)
