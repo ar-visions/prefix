@@ -372,7 +372,6 @@ def prepare_project(src_dir):
                 if not os.path.exists(sym_peer): os.symlink(rel_peer, sym_peer, True)
                 assert(os.path.islink(sym_peer))
                 prepare_project(rel_peer) # recurse into project, pulling its things too
-                continue
             every_import.append(fields)
 
         # at this point, it has everything in 
