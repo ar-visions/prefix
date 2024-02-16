@@ -36,6 +36,9 @@ sdk_cmake      = f'{build_dir}/sdk.cmake'
 io_res         = f'{build_dir}/io/res'
 cm_build       = f'ion-{cfg_lower}' + ('' if sdk == 'native' else f'-{sdk}') # probably call this build or build-sdk
 
+os.environ['BUILD_CONFIG'] = cfg_lower
+os.environ['BUILD_SDK'] = sdk
+
 if 'CMAKE_SOURCE_DIR' in os.environ: del os.environ['CMAKE_SOURCE_DIR']
 if 'CMAKE_BINARY_DIR' in os.environ: del os.environ['CMAKE_BINARY_DIR']
 if 'CMAKE_BUILD_TYPE' in os.environ: del os.environ['CMAKE_BUILD_TYPE']
@@ -173,7 +176,12 @@ def gen(fields, type, project_root, prefix_path, extra):
     
     return cmake(fields, *args)
 
-def  cm_install(fields): return cmake(fields, '--install', cm_build, '--config', cfg)
+def  cm_install(fields):
+    if not 'install' in fields:
+        return cmake(fields, '--install', cm_build, '--config', cfg)
+    else:
+        cmd = ['python3' + exe] + [fields['install']]
+        return run_check(cmd)
 
 def latest_file(root_path, avoid = None):
     t_latest = 0
@@ -282,7 +290,7 @@ def prepare_build(this_src_dir, fields, mt_project):
                 os.chdir(vname)
             
             if branch:
-                cmd = ['git', 'rev-parse', branch]
+                cmd = ['git', 'checkout', branch]
                 commit = subprocess.check_output(cmd).decode('utf-8').strip()
             if not commit:
                 commit = 'main'
