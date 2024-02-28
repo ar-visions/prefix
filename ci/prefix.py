@@ -282,7 +282,10 @@ def prepare_build(this_src_dir, fields, mt_project):
             os.chdir(extern_dir)
             if not os.path.exists(vname):
                 first_checkout = True
-                git(fields, True, 'clone', '--recursive', url, vname)
+                if 'recursive' in fields and fields['recursive'] == False:
+                    git(fields, True, 'clone', url, vname)
+                else:
+                    git(fields, True, 'clone', '--recursive', url, vname)
                 os.chdir(vname)
                 if(fields.get('git')):
                     git(fields, True, *fields['git'])
@@ -443,15 +446,23 @@ def prepare_project(src_dir):
             
             ## only building the src git repos; the resources are system specific builds
             if not cached and is_git and not resource:
-                gen(fields, cfg, project_root, prefix_path, cmake_args)
 
-                prev_cwd = os.getcwd()
+                prebuild = fields.get('prebuild')
+                os.chdir(remote_path)
+
+                if prebuild:
+                    print(f'pre-building {name}...')
+                    cmd = ['python3' + exe] + [prebuild]
+                    run_check(cmd)
+                
+                print(f'generating {name}...')
+                gen(fields, cfg, project_root, prefix_path, cmake_args)
                 os.chdir(remote_build_path)
 
                 print(f'building {name}...')
                 build(fields)
 
-                os.chdir(prev_cwd)
+                os.chdir(remote_path)
                 
                 # something with libs is just a declaration with an environment variable usually, already installed in effect if there are libs
                 if not libs:
