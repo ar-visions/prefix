@@ -139,7 +139,11 @@ def cmake(fields, *args):
 
 # 
 def build(fields):
-    args = ['--build', '.', '--parallel', str(multiprocessing.cpu_count()), '--config', cfg]
+    if 'parallel' in fields:
+        p = str(fields['parallel']) # there are times where builds dont work in parallel; in such cases set parallel to 1 in the project.json
+    else:
+        p = str(multiprocessing.cpu_count()) # use the core count by default
+    args = ['--build', '.', '--parallel', p, '--config', cfg]
     cm = fields.get('cmake')
     if cm and cm.get('target'):
         target = cm.get('target')

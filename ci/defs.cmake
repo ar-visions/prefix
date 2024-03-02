@@ -70,6 +70,12 @@ macro(set_defs)
     set(${EXTERN} "1")
     set(${SDK}    "1")
     set(${OS}     "1")
+    if(x86_64)
+        set(x64 TRUE)
+    endif()
+    if(linux)
+        set(lin   TRUE)
+    endif()
     set(cpp        23)
 
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -82,7 +88,7 @@ macro(set_defs)
     set(INSTALL_PREFIX  "${prefix_dir}/install/${SDK}-${cfg_lower}")
     set(CI_DIR          "${prefix_dir}/ci")
     set(EXTERN_DIR      "${prefix_dir}/extern")
-
+    
     # determine if modules are compilable by looking for these exts
     set(COMPILABLE_EXTS ".cpp .cc .c .cxx .ixx .mm")
 
@@ -148,17 +154,14 @@ macro(set_defs)
     set(CMAKE_C_STANDARD                11)
     set(CMAKE_CXX_STANDARD              17)
 
+
     if(NOT MSVC)
-        #set(CMAKE_CXX_FLAGS -fmodules)
-        #add_compile_options(-fmodules --precompile)
         if(x64 AND native)
-            add_compile_options(-mavx)
+            add_compile_options(
+                -mavx2 -mavx512f -mavx512dq -mavx512cd -mavx512bw -mavx512vl -mf16c)
         endif()
-        #add_compile_options(
-        #    -Wall -Wfatal-errors  -Wno-strict-aliasing
-        #    -fpic -funwind-tables -fvisibility=hidden -pipe)
     else()
-        add_compile_options(/arch:AVX)
+        add_compile_options(/arch:AVX2)
     endif()
 endmacro()
 
@@ -181,6 +184,8 @@ macro(listy n prefix)
             set(${n} ${${n}} ${prefix}${aa})
         elseif(f STREQUAL "-")
             string(SUBSTRING ${a} 1 -1 aa)
+
+            # todo: add general wildcard support (or regex?)
             foreach(item ${${n}})
                 string(FIND "${item}" "${prefix}${aa}" position REVERSE)
                 if(position GREATER -1)
@@ -216,19 +221,30 @@ macro(apps)
 endmacro()
 
 function(src)
-    list(GET ARGN 0 n)
-    string(FIND ${n} "*" index)
-    
-    if(index GREATER -1)
-        file(GLOB files ${n})
-        foreach(f ${files})
-            list(APPEND _src "${f}")
-        endforeach()
-    else()
-        listy(_src "" ${ARGN})
-    endif()
+
+    foreach(n IN LISTS ARGN)
+        string(FIND ${n} "*" index)
+        if(index GREATER -1)
+            string(FIND ${n} "**" index_double)
+            if(index_double GREATER -1)
+                file(GLOB_RECURSE files ${n})
+                foreach(f ${files})
+                    list(APPEND _src "${f}")
+                endforeach()
+            else()
+                file(GLOB files ${n})
+                foreach(f ${files})
+                    list(APPEND _src "${f}")
+                endforeach()
+            endif()
+        else()
+            listy(_src "" ${n})
+        endif()
+
+    endforeach()
 
     set(_src ${_src} PARENT_SCOPE)
+
 endfunction()
 
 macro(artifacts)
