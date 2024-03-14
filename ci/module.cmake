@@ -236,7 +236,6 @@ macro(var_finish)
         endif()
     endforeach()
 
-    # resolve this full_src list [not working atm; its still compiling symlinked stuff which vscode has trouble w]
     resolve_symlinks(full_src full_src)
     set(full_includes "")
 

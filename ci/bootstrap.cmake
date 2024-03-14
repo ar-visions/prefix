@@ -4,7 +4,6 @@ include(../prefix/ci/json.cmake)
 include(../prefix/ci/defs.cmake)
 include(../prefix/ci/module.cmake)
 include(../prefix/ci/package.cmake)
-## clang++  (currently massive garbage heap going on in that code-base. g++ is superior)
 ## include(../prefix/ci/cxx20.cmake)
 
 macro(assert COND DESC)

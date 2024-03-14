@@ -522,7 +522,7 @@ if sdk_src:
         with open(sdk_cache, 'w') as sdk_f:
             rdata = requests.get(sdk_src)
         sdk_src = sdk_location + '-src'
-        auto_extract(rdata.content, sdk_src)
+        #auto_extract(rdata.content, sdk_src)
         os.chdir(sdk_src)
         print(f'configuring sdk {sdk}')
         run_check(['./configure', f'--target={sdk}', f'--prefix={sdk_location}'], capture_output=True, text=True)
