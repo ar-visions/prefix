@@ -26,6 +26,7 @@ macro(exit c)
 endmacro()
 
 macro(set_defs)
+    cmake_policy(SET CMP0022 NEW)
     if(NOT CMAKE_BUILD_TYPE)
         print("setting Debug build (default)")
         set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "type of build" FORCE)
@@ -189,7 +190,7 @@ macro(listy n prefix)
             foreach(item ${${n}})
                 string(FIND "${item}" "${prefix}${aa}" position REVERSE)
                 if(position GREATER -1)
-                    print("removing item: ${item}, matches ${prefix}${aa}")
+                    #print("removing item: ${item}, matches ${prefix}${aa}")
                     list(REMOVE_ITEM ${n} ${item})
                 endif()
             endforeach()
@@ -206,6 +207,10 @@ endmacro()
 # this needs some additional processing for setting strings, but you can - remove defs.  to me thats intuitive, it just needs a :"string" :integer, etc
 macro(defines)
     listy(_defines "" ${ARGN})
+endmacro()
+
+macro(public_defines)
+    listy(_public_defines "" ${ARGN})
 endmacro()
 
 macro(lib_paths)
@@ -253,6 +258,10 @@ endmacro()
 
 macro(includes)
     listy(includes "" ${ARGN})
+endmacro()
+
+macro(public_includes)
+    listy(_public_includes "" ${ARGN})
 endmacro()
 
 macro(tests)

@@ -59,6 +59,7 @@ macro(set_compilation t mod)
     target_compile_definitions(${t} PRIVATE  UNICODE)
     target_compile_definitions(${t} PRIVATE _UNICODE)
     target_compile_definitions(${t} PRIVATE ${_defines})
+    target_compile_definitions(${t} PUBLIC  ${_public_defines})
 endmacro()
 
 macro(app_source app)
@@ -270,7 +271,18 @@ macro(var_finish)
         else()
             # include must be found; otherwise its indication of error
             # ------------------------
-            message(FATAL_ERROR "couldnt find include path for symbol: ${n}")
+            message(FATAL_ERROR "couldnt find include path for symbol: ${n} (private)")
+        endif()
+    endforeach()
+    # public_includes() isnt the best; we should have rules that span between deps and includes
+    foreach(n ${_public_includes})
+        if(EXISTS ${n})
+            list(APPEND public_full_includes ${n})
+        elseif(EXISTS "${INSTALL_PREFIX}/include/${n}")
+            message("include (prefix): ${n} (public)")
+            list(APPEND public_full_includes "${INSTALL_PREFIX}/include/${n}")
+        else()
+            message(FATAL_ERROR "couldnt find include path for symbol: ${n} (public)")
         endif()
     endforeach()
 endmacro()
@@ -456,7 +468,7 @@ macro(process_dep d t_name)
             
             get_target_property(t_type ${mod_target} TYPE)
             if(t_type MATCHES ".*_LIBRARY$")
-                target_link_libraries(${t_name} PRIVATE ${mod_target})
+                target_link_libraries(${t_name} INTERFACE ${mod_target})
                 target_include_directories(${t_name} PUBLIC ${extern_path})
                 #print("target_include_directories ${t_name} -> ${extern_path}")
             endif()
@@ -641,6 +653,11 @@ macro(create_module_targets)
         if(full_includes)
             target_include_directories(${t_name} PUBLIC ${full_includes})
         endif()
+
+        if(public_full_includes)
+            message(STATUS "public: ${public_full_includes}")
+            target_include_directories(${t_name} PUBLIC ${public_full_includes})
+        endif()
         set_target_properties(${t_name} PROPERTIES LINKER_LANGUAGE CXX)
 
         # show module file in IDEs
@@ -683,7 +700,7 @@ macro(create_module_targets)
             target_include_directories(${test_target} PRIVATE ${p}/apps)
             module_includes(${test_target} ${r_path} ${mod})
             set_compilation(${test_target} ${mod})
-            target_link_libraries(${test_target} PRIVATE ${t_name})
+            target_link_libraries(${test_target} PUBLIC ${t_name})
             # ------------------------
             if(NOT TARGET test-${t_name})
                 add_custom_target(test-${t_name})
@@ -756,7 +773,7 @@ macro(create_module_targets)
             string(REPLACE "-" "_" u ${u})
 
             target_compile_definitions(${t_app} PRIVATE APP_${u})
-            target_link_libraries(${t_app} PRIVATE ${t_name}) # public?
+            target_link_libraries(${t_app} PUBLIC ${t_name}) # public?
             add_dependencies(${t_app} ${t_name})
 
             # set the cpp version specified in mod file
