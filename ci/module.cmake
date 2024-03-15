@@ -58,7 +58,22 @@ macro(set_compilation t mod)
     target_compile_definitions(${t} PRIVATE ARCH_${UARCH})
     target_compile_definitions(${t} PRIVATE  UNICODE)
     target_compile_definitions(${t} PRIVATE _UNICODE)
-    target_compile_definitions(${t} PRIVATE ${_defines})
+
+    set(private_defines "")
+    set(public_defines  "")
+
+    foreach(def ${_defines})
+        if("${def}" MATCHES "^@")
+            string(SUBSTRING ${def} 1 -1 substring)
+            list(APPEND public_defines ${substring})
+        else()
+            list(APPEND private_defines ${def})
+        endif()
+    endforeach()
+
+    target_compile_definitions(${t} PRIVATE ${private_defines})
+    target_compile_definitions(${t} PRIVATE ${public_defines})
+
 endmacro()
 
 macro(app_source app)
@@ -455,7 +470,7 @@ macro(process_dep d t_name)
             
             get_target_property(t_type ${mod_target} TYPE)
             if(t_type MATCHES ".*_LIBRARY$")
-                target_link_libraries(${t_name} PRIVATE ${mod_target})
+                target_link_libraries(${t_name} PUBLIC ${mod_target})
                 target_include_directories(${t_name} PUBLIC ${extern_path})
                 #print("target_include_directories ${t_name} -> ${extern_path}")
             endif()
