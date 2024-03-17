@@ -48,13 +48,14 @@ if 'CMAKE_CXX_COMPILER' in os.environ: del os.environ['CMAKE_CXX_COMPILER']
 if 'CPATH'            in os.environ: del os.environ['CPATH']
 if 'LIBRARY_PATH'     in os.environ: del os.environ['LIBRARY_PATH']
 
+s              = os.sep
 pf_repo        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-install_dir    = f'install/{sdk}-{cfg_lower}'
-sdk_rel        = f'sdk/{sdk}' if sdk != 'native' else ''
-install_prefix = f'{pf_repo}/{install_dir}'
-sdk_location   = f'{pf_repo}/{sdk_rel}' if sdk_rel else ''
-extern_dir     = f'{pf_repo}/extern' # we put different build dirs for the different sdks in here.  it would be ludacrous to checkout more?...
-mingw_cmake    = f'{pf_repo}/ci/mingw-cmake.sh' # oh boy we need to properly use mingw on windows, as its just not going to work supporting native land only.  it means the skia overlay we can bring back
+install_dir    = f'install{s}{sdk}-{cfg_lower}'
+sdk_rel        = f'sdk{s}{sdk}' if sdk != 'native' else ''
+install_prefix = f'{pf_repo}{s}{install_dir}'
+sdk_location   = f'{pf_repo}{s}{sdk_rel}' if sdk_rel else ''
+extern_dir     = f'{pf_repo}{s}extern' # we put different build dirs for the different sdks in here.  it would be ludacrous to checkout more?...
+mingw_cmake    = f'{pf_repo}{s}ci{s}mingw-cmake.sh' # oh boy we need to properly use mingw on windows, as its just not going to work supporting native land only.  it means the skia overlay we can bring back
 gen_only       = os.environ.get('GEN_ONLY')
 exe            = ('.exe' if p == 'win' else '')
 dir            = os.path.dirname(os.path.abspath(__file__))
@@ -64,20 +65,20 @@ common         = ['.cc',  '.c',   '.cpp', '.cxx', '.h',  '.hpp',
 every_import = ['prefix'] # prefix with prefix.
 every_sdk    = [{'name':'native', 'args':{}}]
 sdk_data     = None
-prefix_sym   = f'{extern_dir}/prefix'
+prefix_sym   = f'{extern_dir}{s}prefix'
 
 os.environ['INSTALL_PREFIX'] = install_prefix
-os.environ['PKG_CONFIG_PATH'] = install_prefix + '/lib/pkgconfig'
+os.environ['PKG_CONFIG_PATH'] = install_prefix + f'{s}lib{s}pkgconfig'
 
 os.chdir(pf_repo)
 
 if not os.path.exists('extern'):             os.mkdir('extern')
 if not os.path.exists('install'):            os.mkdir('install')
 if not os.path.exists(install_dir):          os.mkdir(install_dir)
-if not os.path.exists(f'{install_dir}/lib'): os.mkdir(f'{install_dir}/lib')
+if not os.path.exists(f'{install_dir}{s}lib'): os.mkdir(f'{install_dir}{s}lib')
 
-if not os.path.exists(f'{install_dir}/lib/Frameworks'):
-    os.mkdir(f'{install_dir}/lib/Frameworks')
+if not os.path.exists(f'{install_dir}{s}lib{s}Frameworks'):
+    os.mkdir(f'{install_dir}{s}lib{s}Frameworks')
 
 if not os.path.exists(prefix_sym): os.symlink(pf_repo, prefix_sym, True)
 
