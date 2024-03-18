@@ -142,6 +142,7 @@ macro(set_defs)
         set(ICC "1")
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         set(MSVC "1")
+        message(FATAL "MSVC deprecated -- use -T Clang when generating with MSVC compiler (must install Clang for MSVC)")
     endif()
 
     string(TOUPPER ${ARCH}              UARCH)
@@ -155,14 +156,8 @@ macro(set_defs)
     set(CMAKE_C_STANDARD                11)
     set(CMAKE_CXX_STANDARD              17)
 
-
-    if(NOT MSVC)
-        if(x64 AND native)
-            add_compile_options(
-                -mavx2 -mavx512f -mavx512dq -mavx512cd -mavx512bw -mavx512vl -mf16c)
-        endif()
-    else()
-        add_compile_options(/arch:AVX2)
+    if(x64 AND native)
+        add_compile_options(-mavx2 -mf16c)
     endif()
 endmacro()
 
