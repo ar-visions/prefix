@@ -25,6 +25,7 @@ macro(exit c)
     print("exiting with code ${c}")
 endmacro()
 
+
 macro(set_defs)
     cmake_policy(SET CMP0022 NEW)
     if(NOT CMAKE_BUILD_TYPE)
@@ -156,9 +157,9 @@ macro(set_defs)
     set(CMAKE_C_STANDARD                11)
     set(CMAKE_CXX_STANDARD              17)
 
-    if(x64 AND native)
-        add_compile_options(-mavx2 -mf16c)
-    endif()
+    #if(x64 AND native)
+    #    add_compile_options(-mavx2 -mf16c)
+    #endif()
 endmacro()
 
 macro(subdirs result curdir)
