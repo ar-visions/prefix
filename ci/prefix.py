@@ -448,18 +448,16 @@ def prepare_project(src_dir):
             
             ## check the timestamp here
             remote_path, remote_build_path, timestamp, cached, vname, is_git, libs, res, url = prepare_build(src_dir, fields, mt_project)
-            
+            prebuild = fields.get('prebuild')
+
+            if not cached and is_git and prebuild:
+                os.chdir(remote_path)
+                print(f'pre-building {name}...')
+                cmd = ['python3' + exe] + [prebuild]
+                run_check(cmd)
+
             ## only building the src git repos; the resources are system specific builds
             if not cached and is_git and not resource:
-
-                prebuild = fields.get('prebuild')
-                os.chdir(remote_path)
-
-                if prebuild:
-                    print(f'pre-building {name}...')
-                    cmd = ['python3' + exe] + [prebuild]
-                    run_check(cmd)
-                
                 print(f'generating {name}...')
                 gen(fields, cfg, project_root, prefix_path, cmake_args)
                 os.chdir(remote_build_path)
