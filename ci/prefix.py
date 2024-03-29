@@ -24,6 +24,7 @@ def sys_type():
     exit(1)
 
 p              = sys_type()
+link           = os.environ.get('LINK')
 src_dir        = os.environ.get('CMAKE_SOURCE_DIR')
 build_dir      = os.environ.get('CMAKE_BINARY_DIR')
 c_compiler     = os.environ.get('CMAKE_C_COMPILER')
@@ -158,6 +159,8 @@ def gen(fields, type, project_root, prefix_path, extra):
             '-B', cm_build, 
            f'-DCI=\'{pf_repo}/ci\'',
            #f'-DCMAKE_SYSTEM_PREFIX_PATH=\'{src_dir}/../ion/ci;{install_prefix}/lib/cmake\'',
+           f'-DCMAKE_POSITION_INDEPENDENT_CODE={"ON" if link == "SHARED" else "OFF"}',
+           f'-DBUILD_SHARED_LIBS={"ON" if link == "SHARED" else "OFF"}',
            f'-DCMAKE_INSTALL_PREFIX=\'{install_prefix}\'', 
            f'-DCMAKE_INSTALL_DATAROOTDIR=\'{install_prefix}/share\'', 
            f'-DCMAKE_INSTALL_DOCDIR=\'{install_prefix}/doc\'', 
@@ -171,6 +174,7 @@ def gen(fields, type, project_root, prefix_path, extra):
            f'-DCMAKE_BUILD_TYPE={build_type}',
            f'-DSDK=\'{sdk}\''
     ]
+
     if extra: args.extend(extra)
     cm = fields.get('cmake')
     if cm:

@@ -46,7 +46,7 @@ macro(set_defs)
     endif()
 
     set_default(ARCH      ${CMAKE_HOST_SYSTEM_PROCESSOR}) # "x64")
-    set_default(LINK      "static")
+    set_default(LINK      "STATIC")
     set_default(PREFIX    "/usr/local")
     set_default(SDK       "native")
     
@@ -69,6 +69,19 @@ macro(set_defs)
 
     set(${ARCH}   "1")
     set(${LINK}   "1")
+    if(LINK STREQUAL "STATIC")
+        set(static TRUE)
+        set(shared FALSE)
+        set(CMAKE_FIND_LIBRARY_SUFFIXES ".a;.lib;.so;.dylib;.dll")
+        # prefix should have a clean on the libs it doesn't prefer
+        # however we must have ability to switch those on and off for individual libs
+        # it should have something like library:name:static to select static or shared
+        # its not good to have shared/statics sitting around; most build systems seem to build both, and only SOME let you switch that off
+    else()
+        set(static FALSE)
+        set(shared TRUE)
+        set(CMAKE_FIND_LIBRARY_SUFFIXES ".so;.dylib;.dll;.a;.lib")
+    endif()
     set(${EXTERN} "1")
     set(${SDK}    "1")
     set(${OS}     "1")
@@ -108,7 +121,7 @@ macro(set_defs)
 
     find_package(PkgConfig QUIET)
     set_property(GLOBAL PROPERTY RULE_MESSAGES OFF)
-    add_definitions(-DLINK=static -DARCH=x64 -DSDK=native)
+    add_definitions(-DLINK=${LINK} -DARCH=${ARCH} -DSDK=${SDK})
 
     if(APPLE)
         set(m_pre                       "lib")

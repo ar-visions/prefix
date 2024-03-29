@@ -162,7 +162,6 @@ macro(var_prepare r_path)
 
     # compile for 17 by default
     set(cpp 17)
-    set(dynamic false)
 
     # list of app targets
     set(apps "")
@@ -502,9 +501,9 @@ macro(process_dep d t_name)
                         endforeach()
                     endforeach()
 
-                    ## switch based on static/dynamic use-cases
+                    ## switch based on static/shared use-cases
                     ## private for shared libs and public for pass-through to exe linking
-                    set_if(exposure dynamic "PRIVATE" "PUBLIC")
+                    set_if(exposure shared "PRIVATE" "PUBLIC")
                     target_link_libraries(${t_name} ${exposure} ${module}) 
                     ## this was private and thats understandable, but apps that use this should also get it too
                     ## do env var replacement on include paths; vulkan one can be guessed and if its not there on init
@@ -616,39 +615,14 @@ macro(create_module_targets)
         add_custom_target(${t_name})
         print("non-compilable module: ${t_name}")
     else()
-        if (dynamic)
-            add_library(${t_name} ${h_list} ${js})
-            if(cpp EQUAL 23)
-                target_sources(${t_name}
-                    PRIVATE
-                        FILE_SET cxx_modules TYPE CXX_MODULES FILES
-                        ${full_src})
-            else()
-                target_sources(${t_name} PRIVATE ${full_src} ${js})
-            endif()
+        if (shared)
+            add_library(${t_name} SHARED ${full_src})
         elseif(static OR external_repo)
-            add_library(${t_name} STATIC)
-            if(cpp EQUAL 23)
-                #target_sources(${t_name}
-                #    PRIVATE
-                #        FILE_SET cxx_modules TYPE CXX_MODULES
-                #        FILES ${full_src} 
-                #    INTERFACE
-                #        FILE_SET headers TYPE HEADERS
-                #        BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/${mod}"
-                #        FILES ${h_list})
-            else()
-                #print("full src for target ${t_name}: ${full_src}")
-                
-                target_sources(${t_name} PRIVATE ${full_src} ${h_list} ${js})
-            endif()
+            add_library(${t_name} STATIC ${full_src})
         else()
-            message(FATAL_ERROR "!dynamic && !static")
+            message(FATAL_ERROR "!shared && !static")
         endif()
         
-        if (WIN32)
-            #add_compile_options(/bigobj)
-        endif()
         address_sanitizer(${t_name})
         set_cpp(${t_name})
 
