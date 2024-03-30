@@ -47,6 +47,7 @@ macro(set_defs)
 
     set_default(ARCH      ${CMAKE_HOST_SYSTEM_PROCESSOR}) # "x64")
     set_default(LINK      "STATIC")
+    set_default(EXTERN_BUILD_TYPE "")
     set_default(PREFIX    "/usr/local")
     set_default(SDK       "native")
     

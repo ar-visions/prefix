@@ -49,13 +49,6 @@ macro(bootstrap_python)
 
         ## if python binary does not exist:
         if(NOT EXISTS ${PYTHON})
-
-            ## clone wolfssl for python (its changed around to use it)
-            if(NOT EXISTS extern/wolfssl)
-                execute_process(COMMAND git clone "https://github.com/wolfSSL/wolfssl.git" ${EXTERN_DIR}/wolfssl)
-                execute_process(COMMAND configure WORKING_DIRECTORY extern/wolfssl)
-            endif()
-
             ## io resources
             if(NOT EXISTS extern/io)
                 execute_process(COMMAND git clone "https://github.com/ar-visions/ar-visions.github.io" ${EXTERN_DIR}/io)
@@ -91,6 +84,7 @@ function(main)
     set(ENV{CMAKE_SOURCE_DIR}   ${CMAKE_SOURCE_DIR})
     set(ENV{CMAKE_BINARY_DIR}   ${CMAKE_BINARY_DIR})
     set(ENV{CMAKE_BUILD_TYPE}   ${CMAKE_BUILD_TYPE})
+    set(ENV{EXTERN_BUILD_TYPE}  ${EXTERN_BUILD_TYPE})
     set(ENV{JSON_IMPORT_INDEX}  ${CMAKE_BINARY_DIR}/import.json)
     if(STATIC)
         set(ENV{STATIC}         "1")

@@ -50,7 +50,7 @@ macro(set_compilation t mod)
     else()
         set(cf ${cxxflags})
     endif()
-    target_compile_options(${t} PUBLIC ${CMAKE_CXX_FLAGS} ${cf})
+    target_compile_options(${t} PRIVATE ${CMAKE_CXX_FLAGS} ${cf})
     if(Clang)
         target_compile_options(${t} PRIVATE -Wfatal-errors)
     endif()
@@ -107,9 +107,13 @@ macro(var_prepare r_path)
     set(_headers        "")
     set(_apps_src       "")
     set(_tests_src      "")
+    set(debuggable      TRUE)
     set(cpp             20)
     set(cstd            99)
     set(p "${module_path}")
+
+    # no harm in doing this one by default; i am thinking glm is bloating up things perhaps
+    cxxflags(+-Wl,--gc-sections)
 
     # compile these as c++-module (.ixx extension) (unix/mac only for g++)
     if(NOT WIN32)
@@ -615,21 +619,20 @@ macro(create_module_targets)
         add_custom_target(${t_name})
         print("non-compilable module: ${t_name}")
     else()
+        
         if (shared)
             add_library(${t_name} SHARED ${full_src})
-        elseif(static OR external_repo)
-            add_library(${t_name} STATIC ${full_src})
         else()
-            message(FATAL_ERROR "!shared && !static")
+            add_library(${t_name} STATIC ${full_src})
         endif()
-        
+
         address_sanitizer(${t_name})
         set_cpp(${t_name})
 
         if(full_includes)
             target_include_directories(${t_name} PUBLIC ${full_includes})
         endif()
-        set_target_properties(${t_name} PROPERTIES LINKER_LANGUAGE CXX)
+        #set_target_properties(${t_name} PROPERTIES LINKER_LANGUAGE CXX)
 
         # show module file in IDEs
         set_source_files_properties(${module_file} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
