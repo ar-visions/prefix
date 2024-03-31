@@ -1,0 +1,86 @@
+
+tapestry should its own language to honor the art of expression in that always be yourself -- so perhaps thats default mode of choice here.
+
+# from build folder inside project
+# ---------------------------------------------------
+# spin ..
+# 
+
+# module.ta
+# ---------------------------------------------------
+# needs a top level invocation here if this is a project module root?
+# tapestry can spin perhaps to call upon more fabric
+
+# if its a new name, then that is a variable set; if its method its called 
+# folders is the basic tapestry iterator, using its own syntax
+# collects path and name
+
+# fun thing is: > path=folders['path'], mod=folders['mod'] is redundant syntax.  you dont need it
+# all things returned by map flow in as variables, but you can remap this way.  although, even names at depth would be accessible by : levels
+
+# for project
+
+project:file.stem
+
+externs:
+    [
+        name:     'glm'
+        version:  '0.9.9.8'
+        commit:   'bf71a83'
+        url:      'https://github.com/g-truc/glm'
+        cmake:
+            args: ['-DBUILD_STATIC_LIBS=1']
+    ]
+    [
+        name:     'glm'
+        version:  '0.9.9.8'
+        commit:   'bf71a83'
+        url:      'https://github.com/g-truc/glm'
+        cmake:
+            args: ['-DBUILD_STATIC_LIBS=1']
+    ]
+
+externs.each: object
+    !object.path: # path does not exist; ! on undefined == undefined'
+        git clone 
+
+# AR build
+# Tapestry
+
+folders '*':
+    path:       folders.path
+    module:     folders.name
+    spin:       path module '$project-$module'
+        name:       spin.name
+        module:     spin.module
+        src:        spin.src
+        cc:         'gcc'
+        objects:    []
+
+        args_for(file): # are defining a function here, but we dont actually have to have a separate syntax
+            file.ext == 'c':
+                args: '-std=c11'
+            file.ext == 'cpp':
+                args: '-std=c++17'
+            
+        src.each: file # does not need to be casted as a file object, as its instanced as one already in src (comes from spun script which does return typed data)
+            object: file:add_ext '.o'
+            file.date > object.date: # modification date is useful enough to be 'date', not mdate or something.  creation date is always before that, and creation is just kind of arb?
+                exit_code: $($cc $args -c $file -o $file.o)
+                exit_code == 0:
+                    objects: objects $file.o
+
+        ar: $(ar rcs $objects):
+        ar != 0:
+            fail:
+                exit_code:-1
+                print:'static .a archive creation exit code: $ar'   # should break the entire process and return failure
+
+        # read info on targets in this module (no abstract rel path for this level)
+        path.json 'targets.json':
+            data: path.json.data
+            apps: data.apps
+            apps.each: app.file # cast to a different type in the tree; json is typeless; a new var calling a method is casting a type to receive its variable
+                compile: $($cc $args_for:app) 
+                compile != 0:
+                    fail:'app compile exit code: $?'
