@@ -112,8 +112,9 @@ macro(var_prepare r_path)
     set(cstd            99)
     set(p "${module_path}")
 
-    # no harm in doing this one by default; i am thinking glm is bloating up things perhaps
-    cxxflags(+-Wl,--gc-sections)
+    # disable a couple C++ 20 warnings
+    cxxflags(+-Wno-deprecated-volatile)
+    cxxflags(+-Wno-ambiguous-reversed-operator)
 
     # compile these as c++-module (.ixx extension) (unix/mac only for g++)
     if(NOT WIN32)
@@ -626,6 +627,10 @@ macro(create_module_targets)
             add_library(${t_name} STATIC ${full_src})
         endif()
 
+        if (EXISTS ${p}/${mod}.hpp)
+            target_precompile_headers(${t_name} PUBLIC ${p}/${mod}.hpp)
+        endif()
+        
         address_sanitizer(${t_name})
         set_cpp(${t_name})
 
@@ -731,7 +736,6 @@ macro(create_module_targets)
                 message(STATUS "The input string has a .cpp extension.")
             else()
                 address_sanitizer(${t_app}) # seems to error with c99 executable on ubuntu
-                target_precompile_headers(${t_app} PRIVATE ${p}/${mod}.hpp)
             endif()
 
             target_include_directories(${t_app} PRIVATE ${p}/apps)
