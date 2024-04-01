@@ -32,6 +32,7 @@ macro(set_defs)
         print("setting Debug build (default)")
         set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "type of build" FORCE)
     endif()
+    set(CMAKE_LINKER "lld" CACHE FILEPATH "Linker")
 
     set(CMAKE_SUPPRESS_REGENERATION false)
 
@@ -100,8 +101,14 @@ macro(set_defs)
         set(cfg_lower "release")
     endif()
 
+    if(EXTERN_BUILD_TYPE STREQUAL "Debug")
+        set(extern_cfg_lower "debug")
+    else()
+        set(extern_cfg_lower "release")
+    endif()
+
     # useful directories
-    set(INSTALL_PREFIX  "${prefix_dir}/install/${SDK}-${cfg_lower}")
+    set(INSTALL_PREFIX  "${prefix_dir}/install/${SDK}-${extern_cfg_lower}")
     set(CI_DIR          "${prefix_dir}/ci")
     set(EXTERN_DIR      "${prefix_dir}/extern")
     

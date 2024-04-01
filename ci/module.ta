@@ -1,7 +1,5 @@
 # for module
 files '*.cpp':
 src: files
-
-# tapestry should work with binaries as method primitives
-copy:weavist [res/folder=*]
-files:name=*.ext=c|cpp > src
+module.path / 'res': rpath:
+    copy:spinner rpath.select('*'):
