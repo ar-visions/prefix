@@ -1,84 +1,69 @@
-
-tapestry should its own language to honor the art of expression in that always be yourself -- so perhaps thats default mode of choice here.
-
-# from build folder inside project
-# ---------------------------------------------------
-# spin ..
-# 
-
-# module.ta
-# ---------------------------------------------------
-# needs a top level invocation here if this is a project module root?
-# tapestry can spin perhaps to call upon more fabric
-
-# we need to receive args
-# 
-
 util:
-    exists:      import 'tapestry' string bool
-    folders:     import 'tapestry' string [path]
-    overlay:     import 'tapestry' string string bool
+    exists:      import 'tapestry' string > bool
+    folders:     import 'tapestry' string > [path]
+    overlay:     import 'tapestry' string string > bool
 
 regex:
-    match:       import 'tapestry' string string u32 string
+    match:       import 'tapestry' string string u32 > string
 
-# this is a routine that has undefined state. sub routines inside; some use that state and those are instance-based
 path:
     src:         string
     
     stem:        method
-        regex.match src /^[^.]*/  # if you call this with just path.stem it would throw an error; no src defined and its read in here; regex method not invoked
+        # if we call this with just path.stem it would throw an error (undefined read)
+        regex.match src /^[^.]*/
     
     ext:         method
-        regex.match src /\.([^.]*)$/
+        return regex.match src /\.([^.]*)$/
     
     exists:      method
         util.exists src
 
-    # this is defining a method that 
     overlay:     method dest:string
         util.overlay dest src
 
-# this would be equal to the .ta file 
 project:[path this].stem
 
+# 'var' object type is implicit here, but we are essentially using that
 externs:
     glm:'https://github.com/g-truc/glm@bf71a83'
         args: ['-DBUILD_STATIC_LIBS=1']
 
 # once a type is made, it would conflict to use it as a variable name
-externs.each: name, url
+externs.each > e:
+    name: e.key
     path extern: 'extern/$name'
-    !extern.exists:
+
+    # should support any manner of operation set here, !!e || (e ^ f) for example
+    !extern.exists: 
         $(git clone $url $extern) 
 
 folders:util.folders '*'
-folders.each: folder
+folders.each > folder:
     path:       folder.src
     module:     folder.stem
-    spin path module '$project-$module':
+    spin path module '$project-$module'
         name:       spin.name
         module:     spin.module
         src:        spin.src
         cc:         'gcc'
         objects:    []
 
-        args_for: method file:path: # are defining a function here, but we dont actually have to have a separate syntax
+        # are defining a function here, but we dont actually have to have a separate syntax
+        args_for: method file 
             file.ext == 'c':
                 args: '-std=c11'
             file.ext == 'cpp':
                 args: '-std=c++17'
-            
-        # does not need to be casted as a file object, as its instanced as one already in src (comes from spun script which does return typed data)
-        # it can also use that name, file; since this 'instance' isnt a type, casting to file can still happen after (we have a type called file in memory)
-        src.each: file
-            object: file:add_ext '.o'
-            file.date.greater-than: object.date: # modification date is useful enough to be 'date', not mdate or something.  creation date is always before that, and creation is just kind of arb?
+        
+        src.each > file:
+            object: file.add_ext '.o'
+            file.date.exceeds object.date:
                 exit_code: $($cc $args -c $file -o $file.o)
                 exit_code == 0:
                     objects: objects $file.o
 
-        ar: $(ar rcs $objects):
+        ar: $(ar rcs $objects)
         ar != 0:
             fail:
                 exit_code:-1

@@ -625,9 +625,9 @@ macro(create_module_targets)
         # we have issues with interoping .c and .cpp with pch on
         foreach(src_file ${full_src})
             if(src_file MATCHES \\.c$)
-                message(STATUS "-----------> excluding file ${src_file} from pch")
                 set_source_files_properties(${src_file} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
             endif()
+            message(STATUS "${t_name} > ${src_file}")
         endforeach()
         
         if (shared)
