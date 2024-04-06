@@ -36,6 +36,10 @@ macro(set_defs)
 
     set(CMAKE_SUPPRESS_REGENERATION false)
 
+    set(compiler_id ${CMAKE_CXX_COMPILER_ID})
+    string(TOLOWER ${compiler_id} compiler_id_lower)
+    set(${compiler_id_lower} TRUE)
+
     if(MSVC)
         # MD = required for c++ 23 modules
         #add_compile_options(/bigobj)
