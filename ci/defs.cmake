@@ -55,6 +55,7 @@ macro(set_defs)
     set_default(EXTERN_BUILD_TYPE "")
     set_default(PREFIX    "/usr/local")
     set_default(SDK       "native")
+    set_default(SANITIZER FALSE)
     
     if(CMAKE_BUILD_TYPE MATCHES Debug)
         set(DEBUG TRUE)

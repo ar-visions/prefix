@@ -45,15 +45,44 @@ macro(module_includes t r_path mod)
 endmacro()
 
 macro(set_compilation t mod)
-    if(cflags)
-        set(cf ${cflags})
-    else()
-        set(cf ${cxxflags})
-    endif()
-    target_compile_options(${t} PRIVATE ${CMAKE_CXX_FLAGS} ${cf})
+    set(private_cxxflags "")
+    set(public_cxxflags  "")
+
+    set(private_cflags "")
+    set(public_cflags  "")
+
+    foreach(def ${cxxflags})
+        if("${def}" MATCHES "^@")
+            string(SUBSTRING ${def} 1 -1 substring)
+            list(APPEND public_cxxflags ${substring})
+        else()
+            list(APPEND private_cxxflags ${def})
+        endif()
+    endforeach()
+
+    foreach(def ${cflags})
+        if("${def}" MATCHES "^@")
+            string(SUBSTRING ${def} 1 -1 substring)
+            list(APPEND public_cflags ${substring})
+        else()
+            list(APPEND private_cflags ${def})
+        endif()
+    endforeach()
+
+    target_compile_options(${t} PRIVATE
+        $<$<COMPILE_LANGUAGE:C>:${private_cflags}>
+        $<$<COMPILE_LANGUAGE:CXX>:${private_cxxflags}>
+    )
+
+    target_compile_options(${t} PUBLIC
+        $<$<COMPILE_LANGUAGE:C>:${public_cflags}>
+        $<$<COMPILE_LANGUAGE:CXX>:${public_cxxflags}>
+    )
+
     if(Clang)
         target_compile_options(${t} PRIVATE -Wfatal-errors)
     endif()
+
     target_link_options       (${t} PRIVATE ${lflags})
     target_compile_definitions(${t} PRIVATE ARCH_${UARCH})
     target_compile_definitions(${t} PRIVATE  UNICODE)
@@ -72,7 +101,7 @@ macro(set_compilation t mod)
     endforeach()
 
     target_compile_definitions(${t} PRIVATE ${private_defines})
-    target_compile_definitions(${t} PRIVATE ${public_defines})
+    target_compile_definitions(${t} PUBLIC  ${public_defines})
 
 endmacro()
 
@@ -553,7 +582,7 @@ endmacro()
 
 macro(address_sanitizer t_name)
     # enable address sanitizer
-    if (DEBUG)
+    if (DEBUG AND SANITIZER)
         if (MSVC)
             #target_compile_options(${t_name} PRIVATE /fsanitize=address)
         else()
@@ -649,7 +678,7 @@ macro(create_module_targets)
         set_cpp(${t_name})
 
         if(full_includes)
-            target_include_directories(${t_name} PUBLIC ${full_includes})
+            target_include_directories(${t_name} PRIVATE ${full_includes})
         endif()
         #set_target_properties(${t_name} PROPERTIES LINKER_LANGUAGE CXX)
 
