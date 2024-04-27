@@ -195,8 +195,8 @@ macro(var_prepare r_path)
         list(APPEND headers ${name})
     endforeach()
 
-    # compile for 17 by default
-    set(cpp 17)
+    # compile for 20 by default
+    set(cpp 20)
 
     # list of app targets
     set(apps "")
